@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Environment
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Testing
+coverage/
+
+# Turbo
+.turbo/
+
+# Prisma
+prisma/migrations/*.sql.tmp
+
+# Keys & secrets (NUNCA en git)
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+
+# Docker volumes (si se genera localmente)
+pgdata/
+redisdata/
+
+# Next.js
+*.tsbuildinfo
+next-env.d.ts

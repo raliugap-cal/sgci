@@ -1,0 +1,217 @@
+version: '3.9'
+
+services:
+  # ─── Base de Datos Principal ───────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sgci-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sgci
+      POSTGRES_USER: sgci_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sgci_dev_pass_2024}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=es_MX.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgci_user -d sgci"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica:
+    image: postgres:16-alpine
+    container_name: sgci-postgres-replica
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sgci
+      POSTGRES_USER: sgci_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sgci_dev_pass_2024}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-replica:/var/lib/postgresql/data
+    profiles: ["production"]
+
+  # ─── Cache y Sesiones ──────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sgci-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_dev_pass_2024} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-redis_dev_pass_2024}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Cola de Mensajes ──────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: sgci-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-sgci_rabbit}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-rabbit_dev_pass_2024}
+      RABBITMQ_DEFAULT_VHOST: sgci
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── Almacenamiento de Archivos (S3-compatible) ────────────
+  minio:
+    image: minio/minio:latest
+    container_name: sgci-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sgci_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_dev_pass_2024}
+    ports:
+      - "9000:9000"
+      - "9001:9001"  # MinIO Console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── API Backend ───────────────────────────────────────────
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+      target: development
+    container_name: sgci-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://sgci_user:${POSTGRES_PASSWORD:-sgci_dev_pass_2024}@postgres:5432/sgci
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_pass_2024}@redis:6379
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-sgci_rabbit}:${RABBITMQ_PASS:-rabbit_dev_pass_2024}@rabbitmq:5672/sgci
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-sgci_minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio_dev_pass_2024}
+      JWT_SECRET: ${JWT_SECRET:-jwt_dev_secret_change_in_prod_2024}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-jwt_refresh_dev_secret_change_in_prod_2024}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-aes256_dev_key_32chars_change_it}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      AWS_SNS_ACCESS_KEY: ${AWS_SNS_ACCESS_KEY:-}
+      AWS_SNS_SECRET_KEY: ${AWS_SNS_SECRET_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      DAILY_API_KEY: ${DAILY_API_KEY:-}
+      RENAPO_URL: ${RENAPO_URL:-https://consultas.renapo.gob.mx}
+      SAT_LCO_URL: ${SAT_LCO_URL:-https://apisnet.col.gob.mx}
+      PAC_URL: ${PAC_URL:-}
+      PAC_USER: ${PAC_USER:-}
+      PAC_PASS: ${PAC_PASS:-}
+      QB_CLIENT_ID: ${QB_CLIENT_ID:-}
+      QB_CLIENT_SECRET: ${QB_CLIENT_SECRET:-}
+      QB_REDIRECT_URI: ${QB_REDIRECT_URI:-http://localhost:3000/integrations/quickbooks/callback}
+      CONEKTA_API_KEY: ${CONEKTA_API_KEY:-}
+      PORT: "4000"
+    ports:
+      - "4000:4000"
+    volumes:
+      - ../apps/api:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ─── Frontend Web (Staff) ──────────────────────────────────
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+      target: development
+    container_name: sgci-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_WS_URL: ws://localhost:4000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
+      - /app/.next
+
+  # ─── Portal Paciente (PWA) ────────────────────────────────
+  portal:
+    build:
+      context: ../apps/portal
+      dockerfile: Dockerfile
+      target: development
+    container_name: sgci-portal
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_WS_URL: ws://localhost:4000
+    ports:
+      - "3001:3000"
+    volumes:
+      - ../apps/portal:/app
+      - /app/node_modules
+      - /app/.next
+
+  # ─── Observabilidad ───────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sgci-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheusdata:/prometheus
+    ports:
+      - "9090:9090"
+    profiles: ["monitoring"]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sgci-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-grafana_dev_2024}
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3002:3000"
+    profiles: ["monitoring"]
+
+volumes:
+  pgdata:
+  pgdata-replica:
+  redisdata:
+  rabbitmqdata:
+  miniodata:
+  prometheusdata:
+  grafanadata:
+
+networks:
+  default:
+    name: sgci-network

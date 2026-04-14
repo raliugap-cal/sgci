@@ -1,0 +1,1196 @@
+// ============================================================
+// SGCI — Sistema de Gestión Clínica Integral — México
+// Prisma Schema v2.1
+// NOM-004-SSA3 · NOM-028-SSA2 · CFDI 4.0 · LFPDPPP
+// ============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────
+
+enum Rol {
+  SUPERADMIN
+  ADMIN_SEDE
+  MEDICO
+  PSICOLOGO
+  ENFERMERIA
+  TRABAJO_SOCIAL
+  RECEPCION
+  LABORATORIO
+  CAJA
+  PACIENTE
+}
+
+enum EstadoCita {
+  PROGRAMADA
+  CONFIRMADA
+  EN_ESPERA
+  EN_CONSULTA
+  COMPLETADA
+  CANCELADA
+  NO_SHOW
+  REAGENDADA
+}
+
+enum TipoCita {
+  PRIMERA_VEZ
+  SEGUIMIENTO
+  URGENCIA
+  TELEMEDICINA
+  PROCEDIMIENTO
+  EVALUACION_ADICCIONES
+  SESION_GRUPAL
+  SESION_FAMILIAR
+}
+
+enum EstadoConsulta {
+  ABIERTA
+  EN_PROGRESO
+  CERRADA
+  FIRMADA
+}
+
+enum TipoNota {
+  SOAP
+  EVOLUCION
+  ENFERMERIA
+  INTERCONSULTA
+  ALTA
+  URGENCIAS
+  PSICOLOGICA
+  TRABAJO_SOCIAL
+  SESION_GRUPAL
+}
+
+enum EstadoOrden {
+  EMITIDA
+  EN_ESPERA_MUESTRA
+  MUESTRA_TOMADA
+  EN_PROCESAMIENTO
+  RESULTADO_CAPTURADO
+  LIBERADA
+  CANCELADA
+}
+
+enum TipoReceta {
+  ORDINARIA
+  ESPECIAL
+  ESTUPEFACIENTE
+}
+
+enum EstadoReceta {
+  ACTIVA
+  DISPENSADA
+  VENCIDA
+  CANCELADA
+}
+
+enum EstadoCFDI {
+  BORRADOR
+  TIMBRADO
+  CANCELADO
+  CANCELACION_PENDIENTE
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO_PARCIAL
+  PAGADO
+  DEVUELTO
+}
+
+enum MetodoPagoSAT {
+  EFECTIVO         // 01
+  CHEQUE           // 02
+  TRANSFERENCIA    // 03
+  TARJETA_CREDITO  // 04
+  TARJETA_DEBITO   // 28
+  CREDITO_INTERNO  // 99
+}
+
+enum TipoConsentimiento {
+  GENERAL_TRATAMIENTO
+  PRIVACIDAD_LFPDPPP
+  ADICCIONES_NOM028
+  TELEMEDICINA
+  CIRUGIA_PROCEDIMIENTO
+  MENOR_EDAD
+  GRABACION_VIDEO
+}
+
+enum ModalidadTratamiento {
+  AMBULATORIO
+  HOSPITAL_DIA
+  RESIDENCIAL
+  GRUPAL
+}
+
+enum EstadoTratamiento {
+  EN_EVALUACION
+  EN_TRATAMIENTO
+  SUSPENSION_TEMPORAL
+  ALTA_TERAPEUTICA
+  ALTA_VOLUNTARIA
+  CANALIZADO
+  ABANDONO
+}
+
+enum SexoBiologico {
+  MASCULINO
+  FEMENINO
+  INTERSEX
+}
+
+enum GrupoSanguineo {
+  A_POSITIVO
+  A_NEGATIVO
+  B_POSITIVO
+  B_NEGATIVO
+  AB_POSITIVO
+  AB_NEGATIVO
+  O_POSITIVO
+  O_NEGATIVO
+  DESCONOCIDO
+}
+
+enum NivelAlerta {
+  P1
+  P2
+  P3
+}
+
+// ─── CATÁLOGOS ──────────────────────────────────────────────
+
+model Especialidad {
+  id          String   @id @default(uuid())
+  clave       String   @unique
+  nombre      String
+  descripcion String?
+  activa      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  medicos     MedicoEspecialidad[]
+  plantillas  PlantillaClinica[]
+
+  @@map("especialidades")
+}
+
+model Medicamento {
+  id                   String   @id @default(uuid())
+  claveCofepris        String   @unique @map("clave_cofepris")
+  nombreDci            String   @map("nombre_dci")
+  nombreComercial      String?  @map("nombre_comercial")
+  presentacion         String?
+  viaAdministracion    String?  @map("via_administracion")
+  grupoTerapeutico     String?  @map("grupo_terapeutico")
+  esControlado         Boolean  @default(false) @map("es_controlado")
+  tipoReceta           TipoReceta? @map("tipo_receta")
+  dosisMaximaDiaria    String?  @map("dosis_maxima_diaria")
+  contraindicaciones   String[]
+  activo               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  itemsReceta          ItemReceta[]
+
+  @@map("medicamentos")
+}
+
+model CodigoCIE10 {
+  id          String   @id @default(uuid())
+  codigo      String   @unique
+  descripcion String
+  capitulo    String?
+  bloque      String?
+  activo      Boolean  @default(true)
+
+  diagnosticos Diagnostico[]
+
+  @@map("codigos_cie10")
+}
+
+model EstudioLab {
+  id                   String   @id @default(uuid())
+  clave                String   @unique
+  nombre               String
+  descripcion          String?
+  instruccionesPaciente String? @map("instrucciones_paciente")
+  tiempoEntregaHoras   Int?     @map("tiempo_entrega_horas")
+  precio               Decimal  @db.Decimal(10, 2)
+  activo               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  itemsOrden          ItemOrden[]
+
+  @@map("estudios_lab")
+}
+
+model Instrumento {
+  id          String   @id @default(uuid())
+  nombre      String   @unique // AUDIT, DAST-10, ASSIST, CAGE, ASI
+  descripcion String?
+  preguntas   Json     // Array de preguntas con opciones y puntajes
+  criterios   Json     // Rangos de interpretación por puntaje
+  activo      Boolean  @default(true)
+
+  aplicaciones InstrumentoAplicado[]
+
+  @@map("instrumentos")
+}
+
+model ServicioCatalogo {
+  id                  String   @id @default(uuid())
+  clave               String   @unique
+  nombre              String
+  descripcion         String?
+  claveSAT            String   @map("clave_sat") // Clave producto/servicio SAT
+  claveUnidadSAT      String   @map("clave_unidad_sat")
+  precio              Decimal  @db.Decimal(10, 2)
+  ivaAplicable        Boolean  @default(false) @map("iva_aplicable")
+  tasaIva             Decimal  @default(0.00) @db.Decimal(5, 4) @map("tasa_iva")
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  cargos              Cargo[]
+
+  @@map("servicios_catalogo")
+}
+
+// ─── SEDES ──────────────────────────────────────────────────
+
+model Sede {
+  id                    String   @id @default(uuid())
+  nombre                String
+  razonSocial           String   @map("razon_social")
+  rfc                   String
+  direccionFiscal       Json     @map("direccion_fiscal")
+  telefono              String?
+  email                 String?
+  licenciaSanitaria     String?  @map("licencia_sanitaria")
+  csdCertificado        String?  @map("csd_certificado")    // Cifrado en reposo
+  csdLlave              String?  @map("csd_llave")          // Cifrado en reposo
+  csdContrasena         String?  @map("csd_contrasena")     // Cifrado en reposo
+  pacUrl                String?  @map("pac_url")
+  pacUser               String?  @map("pac_user")
+  pacPass               String?  @map("pac_pass")           // Cifrado en reposo
+  dailyApiKey           String?  @map("daily_api_key")      // Cifrado en reposo
+  whatsappPhoneNumberId String?  @map("whatsapp_phone_number_id")
+  whatsappAccessToken   String?  @map("whatsapp_access_token") // Cifrado en reposo
+  qbRealmId             String?  @map("qb_realm_id")
+  qbAccessToken         String?  @map("qb_access_token")    // Cifrado en reposo
+  qbRefreshToken        String?  @map("qb_refresh_token")   // Cifrado en reposo
+  qbTokenExpiry         DateTime? @map("qb_token_expiry")
+  configJson            Json?    @map("config_json")
+  logoUrl               String?  @map("logo_url")
+  activa                Boolean  @default(true)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  actorId               String?  @map("actor_id")
+
+  usuarios              Usuario[]
+  citas                 Cita[]
+  consultas             Consulta[]
+  pacientes             Paciente[]
+  facturas              Factura[]
+  inventario            Inventario[]
+  horarios              HorarioSede[]
+  ordenesLaboratorio    OrdenLaboratorio[]
+
+  @@map("sedes")
+}
+
+model HorarioSede {
+  id            String   @id @default(uuid())
+  sedeId        String   @map("sede_id")
+  diaSemana     Int      // 0=Dom, 1=Lun, ..., 6=Sáb
+  horaApertura  String   @map("hora_apertura")  // HH:MM
+  horaCierre    String   @map("hora_cierre")    // HH:MM
+  activo        Boolean  @default(true)
+
+  sede          Sede     @relation(fields: [sedeId], references: [id])
+
+  @@map("horarios_sede")
+}
+
+// ─── USUARIOS Y MÉDICOS ─────────────────────────────────────
+
+model Usuario {
+  id                String    @id @default(uuid())
+  sedeId            String    @map("sede_id")
+  nombre            String
+  apellidoPaterno   String    @map("apellido_paterno")
+  apellidoMaterno   String?   @map("apellido_materno")
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  curp              String?   // Cifrado
+  roles             Rol[]
+  mfaActivo         Boolean   @default(false) @map("mfa_activo")
+  mfaSecret         String?   @map("mfa_secret")  // Cifrado
+  mfaBackupCodes    String[]  @map("mfa_backup_codes")
+  activo            Boolean   @default(true)
+  ultimoAcceso      DateTime? @map("ultimo_acceso")
+  sesionesActivas   Int       @default(0) @map("sesiones_activas")
+  intentosFallidos  Int       @default(0) @map("intentos_fallidos")
+  bloqueadoHasta    DateTime? @map("bloqueado_hasta")
+  actorId           String?   @map("actor_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  sede              Sede      @relation(fields: [sedeId], references: [id])
+  medico            Medico?
+  refreshTokens     RefreshToken[]
+
+  @@map("usuarios")
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  usuarioId   String   @map("usuario_id")
+  token       String   @unique
+  expiresAt   DateTime @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Medico {
+  id                   String   @id @default(uuid())
+  usuarioId            String   @unique @map("usuario_id")
+  cedulaProfesional    String   @map("cedula_profesional")
+  universidad          String?
+  firmaImagenUrl       String?  @map("firma_imagen_url")
+  habilitadoControlados Boolean @default(false) @map("habilitado_controlados")
+  foliosCofepris       String[] @map("folios_cofepris")  // Pool de folios disponibles
+  colorAgenda          String   @default("#3B82F6") @map("color_agenda")
+  activo               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  usuario              Usuario  @relation(fields: [usuarioId], references: [id])
+  especialidades       MedicoEspecialidad[]
+  citas                Cita[]
+  consultas            Consulta[]
+  notasClinicas        NotaClinica[]
+  ordenes              OrdenLaboratorio[]
+  recetas              Receta[]
+  expedientesAdiccion  ExpedienteAdiccion[]
+
+  @@map("medicos")
+}
+
+model MedicoEspecialidad {
+  medicoId        String     @map("medico_id")
+  especialidadId  String     @map("especialidad_id")
+  esPrincipal     Boolean    @default(false) @map("es_principal")
+  asignadaAt      DateTime   @default(now()) @map("asignada_at")
+
+  medico          Medico     @relation(fields: [medicoId], references: [id])
+  especialidad    Especialidad @relation(fields: [especialidadId], references: [id])
+
+  @@id([medicoId, especialidadId])
+  @@map("medico_especialidades")
+}
+
+// ─── PACIENTES ──────────────────────────────────────────────
+
+model Paciente {
+  id                   String        @id @default(uuid())
+  sedeId               String        @map("sede_id")
+  numeroExpediente     String        @unique @map("numero_expediente")
+  nombre               String
+  apellidoPaterno      String        @map("apellido_paterno")
+  apellidoMaterno      String?       @map("apellido_materno")
+  fechaNacimiento      DateTime      @map("fecha_nacimiento")
+  sexo                 SexoBiologico
+  generoIdentidad      String?       @map("genero_identidad")
+  curp                 Bytes?        // AES-256 cifrado
+  rfc                  Bytes?        // AES-256 cifrado
+  regimenFiscal        String?       @map("regimen_fiscal")
+  usoCfdi              String?       @map("uso_cfdi")
+  emailCifrado         Bytes?        @map("email_cifrado")
+  telefonoCifrado      Bytes?        @map("telefono_cifrado")
+  whatsappCifrado      Bytes?        @map("whatsapp_cifrado")
+  preferenciaMensajeria String       @default("whatsapp") @map("preferencia_mensajeria")
+  direccion            Json?
+  grupoSanguineo       GrupoSanguineo @default(DESCONOCIDO) @map("grupo_sanguineo")
+  estadoCivil          String?       @map("estado_civil")
+  ocupacion            String?
+  escolaridad          String?
+  religion             String?
+  tieneExpedienteAdicciones Boolean  @default(false) @map("tiene_expediente_adicciones")
+  portalActivado       Boolean       @default(false) @map("portal_activado")
+  portalPasswordHash   String?       @map("portal_password_hash")
+  portalUltimoAcceso   DateTime?     @map("portal_ultimo_acceso")
+  activo               Boolean       @default(true)
+  actorId              String?       @map("actor_id")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  sede                 Sede          @relation(fields: [sedeId], references: [id])
+  citas                Cita[]
+  consultas            Consulta[]
+  consentimientos      Consentimiento[]
+  alergias             Alergia[]
+  antecedentes         Antecedente[]
+  ordenes              OrdenLaboratorio[]
+  recetas              Receta[]
+  facturas             Factura[]
+  expedienteAdiccion   ExpedienteAdiccion?
+  mensajesPortal       MensajePortal[]
+
+  @@index([sedeId])
+  @@index([numeroExpediente])
+  @@map("pacientes")
+}
+
+model Consentimiento {
+  id               String              @id @default(uuid())
+  pacienteId       String              @map("paciente_id")
+  tipo             TipoConsentimiento
+  version          String              @default("1.0")
+  textoSnapshot    String              @map("texto_snapshot")
+  firmado          Boolean             @default(false)
+  firmaBase64      String?             @map("firma_base64")
+  ipFirma          String?             @map("ip_firma")
+  firmadoPorId     String?             @map("firmado_por_id")
+  firmadoAt        DateTime?           @map("firmado_at")
+  vigente          Boolean             @default(true)
+  createdAt        DateTime            @default(now()) @map("created_at")
+
+  paciente         Paciente            @relation(fields: [pacienteId], references: [id])
+
+  @@map("consentimientos")
+}
+
+model Alergia {
+  id          String   @id @default(uuid())
+  pacienteId  String   @map("paciente_id")
+  tipo        String   // medicamento, alimento, ambiental, látex, otro
+  agente      String
+  reaccion    String?
+  severidad   String?  // leve, moderada, grave, anafilaxia
+  verificada  Boolean  @default(false)
+  activa      Boolean  @default(true)
+  actorId     String?  @map("actor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  paciente    Paciente @relation(fields: [pacienteId], references: [id])
+
+  @@map("alergias")
+}
+
+model Antecedente {
+  id          String   @id @default(uuid())
+  pacienteId  String   @map("paciente_id")
+  tipo        String   // heredo_familiar, personal_no_pat, personal_pat, gineco_obst, psiquiatrico
+  descripcion String
+  activo      Boolean  @default(true)
+  actorId     String?  @map("actor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  paciente    Paciente @relation(fields: [pacienteId], references: [id])
+
+  @@map("antecedentes")
+}
+
+// ─── AGENDA Y CITAS ─────────────────────────────────────────
+
+model BloqueoAgenda {
+  id          String   @id @default(uuid())
+  medicoId    String   @map("medico_id")
+  sedeId      String   @map("sede_id")
+  inicio      DateTime
+  fin         DateTime
+  motivo      String?
+  actorId     String?  @map("actor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("bloqueos_agenda")
+}
+
+model Cita {
+  id                       String      @id @default(uuid())
+  pacienteId               String      @map("paciente_id")
+  medicoId                 String      @map("medico_id")
+  sedeId                   String      @map("sede_id")
+  tipoCita                 TipoCita    @map("tipo_cita")
+  estado                   EstadoCita  @default(PROGRAMADA)
+  esTelemedicina           Boolean     @default(false) @map("es_telemedicina")
+  dailyRoomUrl             String?     @map("daily_room_url")
+  dailyRoomToken           String?     @map("daily_room_token")   // Token del médico
+  dailyRoomName            String?     @map("daily_room_name")
+  fechaInicio              DateTime    @map("fecha_inicio")
+  fechaFin                 DateTime    @map("fecha_fin")
+  motivoConsulta           String?     @map("motivo_consulta")
+  notasRecepcion           String?     @map("notas_recepcion")
+  recordatorio24hEnviado   Boolean     @default(false) @map("recordatorio_24h_enviado")
+  recordatorio2hEnviado    Boolean     @default(false) @map("recordatorio_2h_enviado")
+  recordatorio24hAt        DateTime?   @map("recordatorio_24h_at")
+  recordatorio2hAt         DateTime?   @map("recordatorio_2h_at")
+  checkInAt                DateTime?   @map("check_in_at")
+  checkOutAt               DateTime?   @map("check_out_at")
+  canceladaMotivo          String?     @map("cancelada_motivo")
+  actorId                  String?     @map("actor_id")
+  createdAt                DateTime    @default(now()) @map("created_at")
+  updatedAt                DateTime    @updatedAt @map("updated_at")
+
+  paciente                 Paciente    @relation(fields: [pacienteId], references: [id])
+  medico                   Medico      @relation(fields: [medicoId], references: [id])
+  sede                     Sede        @relation(fields: [sedeId], references: [id])
+  consulta                 Consulta?
+
+  @@index([medicoId, fechaInicio])
+  @@index([sedeId, fechaInicio])
+  @@index([pacienteId])
+  @@map("citas")
+}
+
+model ListaEspera {
+  id          String    @id @default(uuid())
+  pacienteId  String    @map("paciente_id")
+  medicoId    String?   @map("medico_id")
+  sedeId      String    @map("sede_id")
+  tipoCita    TipoCita  @map("tipo_cita")
+  motivo      String?
+  disponible  Boolean   @default(true)
+  actorId     String?   @map("actor_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  expiresAt   DateTime  @map("expires_at")
+
+  @@map("lista_espera")
+}
+
+// ─── CONSULTAS Y HCE ────────────────────────────────────────
+
+model Consulta {
+  id                 String          @id @default(uuid())
+  citaId             String          @unique @map("cita_id")
+  pacienteId         String          @map("paciente_id")
+  medicoId           String          @map("medico_id")
+  sedeId             String          @map("sede_id")
+  esTelemedicina     Boolean         @default(false) @map("es_telemedicina")
+  dailySessionId     String?         @map("daily_session_id")
+  duracionVideoMin   Int?            @map("duracion_video_min")
+  estado             EstadoConsulta  @default(ABIERTA)
+  inicioAtencion     DateTime?       @map("inicio_atencion")
+  finAtencion        DateTime?       @map("fin_atencion")
+  actorId            String?         @map("actor_id")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  cita               Cita            @relation(fields: [citaId], references: [id])
+  paciente           Paciente        @relation(fields: [pacienteId], references: [id])
+  medico             Medico          @relation(fields: [medicoId], references: [id])
+  sede               Sede            @relation(fields: [sedeId], references: [id])
+  notas              NotaClinica[]
+  signosVitales      SignosVitales?
+  diagnosticos       Diagnostico[]
+  ordenes            OrdenLaboratorio[]
+  recetas            Receta[]
+  factura            Factura?
+
+  @@index([pacienteId])
+  @@index([medicoId])
+  @@map("consultas")
+}
+
+model PlantillaClinica {
+  id              String       @id @default(uuid())
+  especialidadId  String?      @map("especialidad_id")
+  nombre          String
+  tipoNota        TipoNota     @map("tipo_nota")
+  contenido       Json         // Estructura de secciones con campos
+  activa          Boolean      @default(true)
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  especialidad    Especialidad? @relation(fields: [especialidadId], references: [id])
+  notas           NotaClinica[]
+
+  @@map("plantillas_clinicas")
+}
+
+model NotaClinica {
+  id                    String    @id @default(uuid())
+  consultaId            String    @map("consulta_id")
+  medicoId              String    @map("medico_id")
+  plantillaId           String?   @map("plantilla_id")
+  tipoNota              TipoNota  @map("tipo_nota")
+  version               Int       @default(1)
+  esTelemedicina        Boolean   @default(false) @map("es_telemedicina")
+  // Campos NOM-004
+  padecimientoActual    String?   @map("padecimiento_actual")
+  interrogatorioSistemas String? @map("interrogatorio_sistemas")
+  exploracionFisica     String?   @map("exploracion_fisica")
+  resultadosAuxiliares  String?   @map("resultados_auxiliares")
+  diagnosticoImpresion  String?   @map("diagnostico_impresion")
+  pronostico            String?
+  planTerapeutico       String?   @map("plan_terapeutico")
+  // SOAP
+  subjetivo             String?
+  objetivo              String?
+  evaluacion            String?
+  plan                  String?
+  // Firma
+  firmada               Boolean   @default(false)
+  firmaHash             String?   @map("firma_hash")  // SHA-256 del contenido
+  firmadaAt             DateTime? @map("firmada_at")
+  // Sync offline
+  syncPending           Boolean   @default(false) @map("sync_pending")
+  creadaOffline         Boolean   @default(false) @map("creada_offline")
+  deviceId              String?   @map("device_id")
+  actorId               String?   @map("actor_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  consulta              Consulta  @relation(fields: [consultaId], references: [id])
+  medico                Medico    @relation(fields: [medicoId], references: [id])
+  plantilla             PlantillaClinica? @relation(fields: [plantillaId], references: [id])
+  versiones             VersionNota[]
+
+  @@map("notas_clinicas")
+}
+
+model VersionNota {
+  id          String   @id @default(uuid())
+  notaId      String   @map("nota_id")
+  version     Int
+  contenido   Json     // Snapshot completo de la nota en ese momento
+  actorId     String?  @map("actor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  nota        NotaClinica @relation(fields: [notaId], references: [id])
+
+  @@map("versiones_nota")
+}
+
+model SignosVitales {
+  id              String   @id @default(uuid())
+  consultaId      String   @unique @map("consulta_id")
+  capturadoPorId  String   @map("capturado_por_id")
+  pesoKg          Decimal? @db.Decimal(5, 2) @map("peso_kg")
+  tallaCm         Decimal? @db.Decimal(5, 2) @map("talla_cm")
+  imc             Decimal? @db.Decimal(5, 2)
+  taSistolica     Int?     @map("ta_sistolica")
+  taDiastolica    Int?     @map("ta_diastolica")
+  fcLpm           Int?     @map("fc_lpm")
+  frRpm           Int?     @map("fr_rpm")
+  temperaturaC    Decimal? @db.Decimal(4, 1) @map("temperatura_c")
+  spo2Pct         Int?     @map("spo2_pct")
+  glucosaMgdl     Decimal? @db.Decimal(6, 2) @map("glucosa_mgdl")
+  perimetroCm     Decimal? @db.Decimal(5, 2) @map("perimetro_cm")  // Cefálico, abd, etc.
+  dolorEscala     Int?     @map("dolor_escala")  // 0-10
+  notas           String?
+  capturadaAt     DateTime @default(now()) @map("capturada_at")
+  syncPending     Boolean  @default(false) @map("sync_pending")
+  creadaOffline   Boolean  @default(false) @map("creada_offline")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  consulta        Consulta @relation(fields: [consultaId], references: [id])
+
+  @@map("signos_vitales")
+}
+
+model Diagnostico {
+  id              String      @id @default(uuid())
+  consultaId      String      @map("consulta_id")
+  cie10Id         String      @map("cie10_id")
+  tipo            String      // principal, secundario, asociado
+  estado          String      // activo, resuelto, cronico, en_estudio
+  notas           String?
+  actorId         String?     @map("actor_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  consulta        Consulta    @relation(fields: [consultaId], references: [id])
+  cie10           CodigoCIE10 @relation(fields: [cie10Id], references: [id])
+
+  @@map("diagnosticos")
+}
+
+// ─── LABORATORIO INTERNO ────────────────────────────────────
+
+model OrdenLaboratorio {
+  id                  String      @id @default(uuid())
+  consultaId          String?     @map("consulta_id")
+  pacienteId          String      @map("paciente_id")
+  medicoId            String      @map("medico_id")
+  sedeId              String      @map("sede_id")
+  estado              EstadoOrden @default(EMITIDA)
+  codigoBarra         String      @unique @map("codigo_barra")
+  instruccionesPaciente String?   @map("instrucciones_paciente")
+  fechaEmision        DateTime    @default(now()) @map("fecha_emision")
+  fechaTomaMuestra    DateTime?   @map("fecha_toma_muestra")
+  fechaProcesamiento  DateTime?   @map("fecha_procesamiento")
+  fechaResultado      DateTime?   @map("fecha_resultado")
+  tomadoPorId         String?     @map("tomado_por_id")
+  procesadoPorId      String?     @map("procesado_por_id")
+  liberadoPorId       String?     @map("liberado_por_id")
+  notificadoMedico    Boolean     @default(false) @map("notificado_medico")
+  notificadoAt        DateTime?   @map("notificado_at")
+  pdfUrl              String?     @map("pdf_url")
+  actorId             String?     @map("actor_id")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  consulta            Consulta?   @relation(fields: [consultaId], references: [id])
+  paciente            Paciente    @relation(fields: [pacienteId], references: [id])
+  medico              Medico      @relation(fields: [medicoId], references: [id])
+  sede                Sede        @relation(fields: [sedeId], references: [id])
+  items               ItemOrden[]
+  resultados          ResultadoLab[]
+
+  @@map("ordenes_laboratorio")
+}
+
+model ItemOrden {
+  id          String     @id @default(uuid())
+  ordenId     String     @map("orden_id")
+  estudioId   String     @map("estudio_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  orden       OrdenLaboratorio @relation(fields: [ordenId], references: [id])
+  estudio     EstudioLab @relation(fields: [estudioId], references: [id])
+  resultados  ResultadoLab[]
+
+  @@map("items_orden")
+}
+
+model ResultadoLab {
+  id              String   @id @default(uuid())
+  ordenId         String   @map("orden_id")
+  itemOrdenId     String?  @map("item_orden_id")
+  estudioNombre   String   @map("estudio_nombre")
+  valor           String?
+  unidades        String?
+  referenciaNormal String?  @map("referencia_normal")
+  fueraRango      Boolean  @default(false) @map("fuera_rango")
+  valorCritico    Boolean  @default(false) @map("valor_critico")
+  observaciones   String?
+  pdfUrl          String?  @map("pdf_url")
+  actorId         String?  @map("actor_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  orden           OrdenLaboratorio @relation(fields: [ordenId], references: [id])
+  itemOrden       ItemOrden? @relation(fields: [itemOrdenId], references: [id])
+
+  @@map("resultados_lab")
+}
+
+// ─── RECETAS COFEPRIS ────────────────────────────────────────
+
+model Receta {
+  id              String       @id @default(uuid())
+  consultaId      String?      @map("consulta_id")
+  medicoId        String       @map("medico_id")
+  pacienteId      String       @map("paciente_id")
+  sedeId          String       @map("sede_id")
+  tipoReceta      TipoReceta   @default(ORDINARIA) @map("tipo_receta")
+  folioCofepris   String?      @map("folio_cofepris")  // Solo para controladas
+  numeroReceta    String       @unique @map("numero_receta")
+  estado          EstadoReceta @default(ACTIVA)
+  qrVerificacion  String?      @map("qr_verificacion")
+  pdfUrl          String?      @map("pdf_url")
+  compartidaWaAt  DateTime?    @map("compartida_wa_at")
+  waMessageId     String?      @map("wa_message_id")
+  syncPending     Boolean      @default(false) @map("sync_pending")
+  actorId         String?      @map("actor_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  consulta        Consulta?    @relation(fields: [consultaId], references: [id])
+  medico          Medico       @relation(fields: [medicoId], references: [id])
+  paciente        Paciente     @relation(fields: [pacienteId], references: [id])
+  items           ItemReceta[]
+
+  @@map("recetas")
+}
+
+model ItemReceta {
+  id                      String      @id @default(uuid())
+  recetaId                String      @map("receta_id")
+  medicamentoId           String?     @map("medicamento_id")
+  medicamentoDci          String      @map("medicamento_dci")
+  medicamentoNombreComercial String?  @map("medicamento_nombre_comercial")
+  presentacion            String?
+  dosis                   String
+  viaAdministracion       String      @map("via_administracion")
+  frecuencia              String
+  duracionDias            Int?        @map("duracion_dias")
+  cantidadTotal           Int?        @map("cantidad_total")
+  indicacionesPaciente    String?     @map("indicaciones_paciente")
+  esControlado            Boolean     @default(false) @map("es_controlado")
+  alertaContraindicacion  Boolean     @default(false) @map("alerta_contraindicacion")
+  alertaDetalle           String?     @map("alerta_detalle")
+  createdAt               DateTime    @default(now()) @map("created_at")
+
+  receta                  Receta      @relation(fields: [recetaId], references: [id])
+  medicamento             Medicamento? @relation(fields: [medicamentoId], references: [id])
+
+  @@map("items_receta")
+}
+
+// ─── FACTURACIÓN CFDI 4.0 ────────────────────────────────────
+
+model Factura {
+  id                    String        @id @default(uuid())
+  pacienteId            String        @map("paciente_id")
+  consultaId            String?       @unique @map("consulta_id")
+  sedeId                String        @map("sede_id")
+  numeroFacturaInterno  String        @unique @map("numero_factura_interno")
+  cfdiUuid              String?       @unique @map("cfdi_uuid")
+  cfdiXmlUrl            String?       @map("cfdi_xml_url")
+  cfdiPdfUrl            String?       @map("cfdi_pdf_url")
+  estadoCfdi            EstadoCFDI    @default(BORRADOR) @map("estado_cfdi")
+  estadoPago            EstadoPago    @default(PENDIENTE) @map("estado_pago")
+  rfcReceptor           String?       @map("rfc_receptor")
+  razonSocialReceptor   String?       @map("razon_social_receptor")
+  regimenFiscalReceptor String?       @map("regimen_fiscal_receptor")
+  usoCfdi               String?       @map("uso_cfdi")
+  subtotal              Decimal       @db.Decimal(12, 2)
+  descuento             Decimal       @default(0.00) @db.Decimal(12, 2)
+  iva                   Decimal       @default(0.00) @db.Decimal(12, 2)
+  total                 Decimal       @db.Decimal(12, 2)
+  moneda                String        @default("MXN")
+  montoPagado           Decimal       @default(0.00) @db.Decimal(12, 2) @map("monto_pagado")
+  saldo                 Decimal       @db.Decimal(12, 2) // total - montoPagado
+  fechaTimbrado         DateTime?     @map("fecha_timbrado")
+  qbSyncPending         Boolean       @default(true) @map("qb_sync_pending")
+  qbInvoiceId           String?       @map("qb_invoice_id")
+  qbPaymentId           String?       @map("qb_payment_id")
+  qbSyncedAt            DateTime?     @map("qb_synced_at")
+  actorId               String?       @map("actor_id")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+
+  paciente              Paciente      @relation(fields: [pacienteId], references: [id])
+  consulta              Consulta?     @relation(fields: [consultaId], references: [id])
+  sede                  Sede          @relation(fields: [sedeId], references: [id])
+  cargos                Cargo[]
+  pagos                 Pago[]
+
+  @@index([sedeId, createdAt])
+  @@index([estadoCfdi])
+  @@index([qbSyncPending])
+  @@map("facturas")
+}
+
+model Cargo {
+  id                String           @id @default(uuid())
+  facturaId         String           @map("factura_id")
+  servicioId        String?          @map("servicio_id")
+  concepto          String
+  claveSAT          String           @map("clave_sat")
+  claveUnidadSAT    String           @map("clave_unidad_sat")
+  precioUnitario    Decimal          @db.Decimal(10, 2) @map("precio_unitario")
+  cantidad          Decimal          @default(1) @db.Decimal(8, 3)
+  descuento         Decimal          @default(0.00) @db.Decimal(10, 2)
+  subtotal          Decimal          @db.Decimal(10, 2)
+  ivaAplicable      Boolean          @default(false) @map("iva_aplicable")
+  tasaIva           Decimal          @default(0.00) @db.Decimal(5, 4) @map("tasa_iva")
+  iva               Decimal          @default(0.00) @db.Decimal(10, 2)
+  total             Decimal          @db.Decimal(10, 2)
+  createdAt         DateTime         @default(now()) @map("created_at")
+
+  factura           Factura          @relation(fields: [facturaId], references: [id])
+  servicio          ServicioCatalogo? @relation(fields: [servicioId], references: [id])
+
+  @@map("cargos")
+}
+
+model Pago {
+  id              String          @id @default(uuid())
+  facturaId       String          @map("factura_id")
+  monto           Decimal         @db.Decimal(12, 2)
+  metodoPago      MetodoPagoSAT   @map("metodo_pago")
+  referencia      String?
+  conektaChargeId String?         @map("conekta_charge_id")
+  notas           String?
+  actorId         String?         @map("actor_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  factura         Factura         @relation(fields: [facturaId], references: [id])
+
+  @@map("pagos")
+}
+
+model CortesCaja {
+  id              String    @id @default(uuid())
+  sedeId          String    @map("sede_id")
+  usuarioId       String    @map("usuario_id")
+  turno           String    // manana, tarde, noche
+  fechaInicio     DateTime  @map("fecha_inicio")
+  fechaFin        DateTime  @map("fecha_fin")
+  totalEfectivo   Decimal   @db.Decimal(12, 2) @map("total_efectivo")
+  totalTarjeta    Decimal   @db.Decimal(12, 2) @map("total_tarjeta")
+  totalTransf     Decimal   @db.Decimal(12, 2) @map("total_transf")
+  totalOtros      Decimal   @db.Decimal(12, 2) @map("total_otros")
+  totalGeneral    Decimal   @db.Decimal(12, 2) @map("total_general")
+  diferencia      Decimal   @default(0.00) @db.Decimal(12, 2)
+  notas           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("cortes_caja")
+}
+
+// ─── ADICCIONES NOM-028 ─────────────────────────────────────
+
+model ExpedienteAdiccion {
+  id                    String              @id @default(uuid())
+  pacienteId            String              @unique @map("paciente_id")
+  medicoResponsableId   String              @map("medico_responsable_id")
+  psicologoId           String?             @map("psicologo_id")
+  trabajadorSocialId    String?             @map("trabajador_social_id")
+  modalidad             ModalidadTratamiento
+  sustanciaPrincipal    String              @map("sustancia_principal")
+  sustanciasSecundarias String[]            @map("sustancias_secundarias")
+  edadInicio            Int?                @map("edad_inicio")
+  patronConsumo         String?             @map("patron_consumo")
+  motivoConsulta        String              @map("motivo_consulta")
+  historiaSocial        String?             @map("historia_social")
+  redApoyo              String?             @map("red_apoyo")
+  antecedentespsiquiatricos String?         @map("antecedentes_psiquiatricos")
+  historiaFamiliar      String?             @map("historia_familiar")
+  estadoTratamiento     EstadoTratamiento   @default(EN_EVALUACION) @map("estado_tratamiento")
+  fechaIngreso          DateTime            @default(now()) @map("fecha_ingreso")
+  fechaEgreso           DateTime?           @map("fecha_egreso")
+  motivoEgreso          String?             @map("motivo_egreso")
+  actorId               String?             @map("actor_id")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  paciente              Paciente            @relation(fields: [pacienteId], references: [id])
+  medicoResponsable     Medico              @relation(fields: [medicoResponsableId], references: [id])
+  planesT               PlanTratamiento[]
+  instrumentos          InstrumentoAplicado[]
+  diario                DiarioConsumo[]
+  notasSesion           NotaSesion[]
+
+  @@map("expedientes_adiccion")
+}
+
+model PlanTratamiento {
+  id                      String             @id @default(uuid())
+  expedienteAdiccionId    String             @map("expediente_adiccion_id")
+  elaboradoPorId          String             @map("elaborado_por_id")
+  version                 Int                @default(1)
+  diagnosticoCie10        String             @map("diagnostico_cie10")
+  objetivoGeneral         String             @map("objetivo_general")
+  objetivosEspecificos    String[]           @map("objetivos_especificos")
+  modalidad               ModalidadTratamiento
+  intervenciones          String[]           // medica, psicologica, grupal, familiar, social
+  sesionesSemMedico       Int                @default(1) @map("sesiones_sem_medico")
+  sesionesSemPsico        Int                @default(1) @map("sesiones_sem_psico")
+  sesionesSemGrupal       Int                @default(0) @map("sesiones_sem_grupal")
+  duracionMeses           Int?               @map("duracion_meses")
+  fechaInicio             DateTime           @map("fecha_inicio")
+  fechaRevision           DateTime           @map("fecha_revision")
+  fechaCierreEstimada     DateTime?          @map("fecha_cierre_estimada")
+  estado                  String             @default("activo") // activo, revisado, cerrado
+  actorId                 String?            @map("actor_id")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+
+  expediente              ExpedienteAdiccion @relation(fields: [expedienteAdiccionId], references: [id])
+
+  @@map("planes_tratamiento")
+}
+
+model InstrumentoAplicado {
+  id                   String             @id @default(uuid())
+  expedienteAdiccionId String             @map("expediente_adiccion_id")
+  instrumentoId        String             @map("instrumento_id")
+  aplicadoPorId        String             @map("aplicado_por_id")
+  respuestas           Json
+  puntaje              Int
+  interpretacion       String
+  observaciones        String?
+  aplicadoAt           DateTime           @default(now()) @map("aplicado_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+
+  expediente           ExpedienteAdiccion @relation(fields: [expedienteAdiccionId], references: [id])
+  instrumento          Instrumento        @relation(fields: [instrumentoId], references: [id])
+
+  @@map("instrumentos_aplicados")
+}
+
+model NotaSesion {
+  id                   String             @id @default(uuid())
+  expedienteAdiccionId String             @map("expediente_adiccion_id")
+  registradoPorId      String             @map("registrado_por_id")
+  tipoSesion           String             @map("tipo_sesion")  // individual, grupal, familiar
+  objetivosSesion      String             @map("objetivos_sesion")
+  contenido            String
+  logros               String?
+  tareas               String?
+  proximaSesion        String?            @map("proxima_sesion")
+  huboConsumo          Boolean?           @map("hubo_consumo")
+  sustonciasConsumo    String[]           @map("sustancias_consumo")
+  firmada              Boolean            @default(false)
+  firmadaAt            DateTime?          @map("firmada_at")
+  syncPending          Boolean            @default(false) @map("sync_pending")
+  actorId              String?            @map("actor_id")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  expediente           ExpedienteAdiccion @relation(fields: [expedienteAdiccionId], references: [id])
+
+  @@map("notas_sesion")
+}
+
+model DiarioConsumo {
+  id                   String             @id @default(uuid())
+  expedienteAdiccionId String             @map("expediente_adiccion_id")
+  fecha                DateTime
+  huboConsumo          Boolean            @map("hubo_consumo")
+  sustancias           Json?              // [{sustancia, cantidad, unidad}]
+  estadoAnimo          Int?               @map("estado_animo")  // 1-10
+  nivelAnsiedad        Int?               @map("nivel_ansiedad") // 1-10
+  factoresRiesgo       String[]           @map("factores_riesgo")
+  notas                String?
+  // Sync offline
+  syncPending          Boolean            @default(false) @map("sync_pending")
+  creadoOffline        Boolean            @default(false) @map("creado_offline")
+  timestampLocal       DateTime?          @map("timestamp_local")
+  createdAt            DateTime           @default(now()) @map("created_at")
+
+  expediente           ExpedienteAdiccion @relation(fields: [expedienteAdiccionId], references: [id])
+
+  @@map("diario_consumo")
+}
+
+// ─── INVENTARIO ─────────────────────────────────────────────
+
+model Inventario {
+  id              String   @id @default(uuid())
+  sedeId          String   @map("sede_id")
+  nombre          String
+  descripcion     String?
+  unidad          String
+  stock           Decimal  @db.Decimal(10, 3)
+  stockMinimo     Decimal  @db.Decimal(10, 3) @map("stock_minimo")
+  precio          Decimal? @db.Decimal(10, 2)
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  sede            Sede     @relation(fields: [sedeId], references: [id])
+  movimientos     MovimientoInventario[]
+  lotes           LoteInventario[]
+
+  @@map("inventario")
+}
+
+model LoteInventario {
+  id            String     @id @default(uuid())
+  inventarioId  String     @map("inventario_id")
+  numeroLote    String     @map("numero_lote")
+  cantidad      Decimal    @db.Decimal(10, 3)
+  fechaCaducidad DateTime? @map("fecha_caducidad")
+  proveedor     String?
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  inventario    Inventario @relation(fields: [inventarioId], references: [id])
+
+  @@map("lotes_inventario")
+}
+
+model MovimientoInventario {
+  id            String     @id @default(uuid())
+  inventarioId  String     @map("inventario_id")
+  tipo          String     // entrada, salida, ajuste, traspaso
+  cantidad      Decimal    @db.Decimal(10, 3)
+  stockAntes    Decimal    @db.Decimal(10, 3) @map("stock_antes")
+  stockDespues  Decimal    @db.Decimal(10, 3) @map("stock_despues")
+  motivo        String?
+  referencia    String?    // ID de consulta, orden de compra, etc.
+  actorId       String?    @map("actor_id")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  inventario    Inventario @relation(fields: [inventarioId], references: [id])
+
+  @@map("movimientos_inventario")
+}
+
+// ─── PORTAL PACIENTE ────────────────────────────────────────
+
+model MensajePortal {
+  id            String    @id @default(uuid())
+  pacienteId    String    @map("paciente_id")
+  sedeId        String    @map("sede_id")
+  asunto        String?
+  contenido     String
+  leido         Boolean   @default(false)
+  respondidoAt  DateTime? @map("respondido_at")
+  respuesta     String?
+  respondidoPorId String? @map("respondido_por_id")
+  syncPending   Boolean   @default(false) @map("sync_pending")
+  creadoOffline Boolean   @default(false) @map("creado_offline")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  paciente      Paciente  @relation(fields: [pacienteId], references: [id])
+
+  @@map("mensajes_portal")
+}
+
+// ─── NOTIFICACIONES ─────────────────────────────────────────
+
+model Notificacion {
+  id              String    @id @default(uuid())
+  pacienteId      String?   @map("paciente_id")
+  medicoId        String?   @map("medico_id")
+  canal           String    // email, sms, whatsapp, push
+  plantilla       String
+  destinatario    String
+  contenido       Json
+  estado          String    @default("pending") // pending, sent, failed, delivered
+  intentos        Int       @default(0)
+  ultimoIntento   DateTime? @map("ultimo_intento")
+  error           String?
+  proveedorMsgId  String?   @map("proveedor_msg_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  enviadaAt       DateTime? @map("enviada_at")
+
+  @@index([estado])
+  @@index([pacienteId])
+  @@map("notificaciones")
+}
+
+// ─── AUDITORÍA INMUTABLE ────────────────────────────────────
+
+model Auditoria {
+  id            String   @id @default(uuid())
+  actorId       String?  @map("actor_id")
+  actorRol      String?  @map("actor_rol")
+  actorEmail    String?  @map("actor_email")
+  sedeId        String?  @map("sede_id")
+  accion        String   // CREATE, UPDATE, DELETE, READ_SENSITIVE, SIGN, CANCEL
+  recursoTipo   String   @map("recurso_tipo")
+  recursoId     String?  @map("recurso_id")
+  datosPrevios  Json?    @map("datos_previos")
+  datosNuevos   Json?    @map("datos_nuevos")
+  ip            String?
+  userAgent     String?  @map("user_agent")
+  esOfflineSync Boolean  @default(false) @map("es_offline_sync")
+  deviceId      String?  @map("device_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([recursoTipo, recursoId])
+  @@index([sedeId, createdAt])
+  @@map("auditoria")
+}

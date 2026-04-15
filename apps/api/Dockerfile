@@ -2,28 +2,31 @@ FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 
-FROM base AS development
-ENV NODE_ENV=development
-COPY . .
+# ─── Install ALL deps (including devDeps needed to build) ──
+FROM base AS deps
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY packages/database/package*.json ./packages/database/
 RUN npm install
-RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
-CMD ["npm", "run", "dev"]
 
-FROM base AS builder
-ENV NODE_ENV=production
+# ─── Build ────────────────────────────────────────────────
+FROM deps AS builder
 COPY . .
-RUN npm install --omit=dev
 RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
-RUN npm run build
+RUN npm run build -w @sgci/api
 
+# ─── Production image (only runtime deps) ─────────────────
 FROM node:20-alpine AS production
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl dumb-init
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+RUN adduser  --system --uid 1001 nestjs
+
+# Copy only what's needed to run
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist            ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules             ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/packages/database/prisma ./packages/database/prisma
+
 ENV NODE_ENV=production
 USER nestjs
 EXPOSE 4000

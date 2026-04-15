@@ -1,6 +1,3 @@
-# nixpacks.toml — Railway build config para la API
-# Railway lo detecta automáticamente si no hay Dockerfile configurado
-
 [phases.setup]
 nixPkgs = ["nodejs_20", "openssl"]
 
@@ -11,9 +8,7 @@ cmds = [
 ]
 
 [phases.build]
-cmds = [
-  "npm run build -w @sgci/api"
-]
+cmds = ["npm run build -w @sgci/api"]
 
 [start]
 cmd = "npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && node apps/api/dist/main"

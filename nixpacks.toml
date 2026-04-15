@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
+
+[phases.install]
+cmds = [
+  "npm install",
+  "npx prisma generate --schema=packages/database/prisma/schema.prisma"
+]
+
+[phases.build]
+cmds = ["npm run build -w @sgci/api"]
+
+[start]
+cmd = "npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && node apps/api/dist/main"

@@ -1,0 +1,23 @@
+{
+  "name": "@sgci/database",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "db:migrate:deploy": "prisma migrate deploy --schema=./prisma/schema.prisma",
+    "db:push": "prisma db push --schema=./prisma/schema.prisma",
+    "db:seed": "ts-node -r tsconfig-paths/register ../../apps/api/src/database/seed.ts",
+    "db:studio": "prisma studio --schema=./prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.12.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.12.0",
+    "typescript": "^5.4.0"
+  },
+  "exports": {
+    ".": "./node_modules/.prisma/client/index.js"
+  }
+}

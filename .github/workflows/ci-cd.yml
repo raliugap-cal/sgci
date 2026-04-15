@@ -1,0 +1,214 @@
+name: SGCI CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/sgci
+
+jobs:
+  # ─── Lint + Type Check ──────────────────────────────────────
+  quality:
+    name: Calidad de código
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Generar Prisma Client
+        run: npm run db:generate
+
+      - name: TypeScript check
+        run: npx tsc --noEmit --project apps/api/tsconfig.json
+
+      - name: Lint
+        run: npm run lint
+
+  # ─── Tests unitarios e integración ──────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sgci_test
+          POSTGRES_USER: sgci_test
+          POSTGRES_PASSWORD: sgci_test_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Generar Prisma Client
+        run: npm run db:generate
+
+      - name: Ejecutar migraciones de prueba
+        env:
+          DATABASE_URL: postgresql://sgci_test:sgci_test_pass@localhost:5432/sgci_test
+        run: npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma
+
+      - name: Tests unitarios
+        env:
+          DATABASE_URL: postgresql://sgci_test:sgci_test_pass@localhost:5432/sgci_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test_jwt_secret_at_least_32_characters_long
+          JWT_REFRESH_SECRET: test_jwt_refresh_secret_also_long
+          ENCRYPTION_KEY: test_encryption_key_exactly_32_chars!
+          NODE_ENV: test
+        run: npm run test -- --coverage --passWithNoTests
+
+      - name: Subir cobertura
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: apps/api/coverage/lcov.info
+
+  # ─── Build Docker Images ─────────────────────────────────────
+  build:
+    name: Build imágenes Docker
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        app: [api, web, portal]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login al registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/develop' }}
+
+      - name: Build y push
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/${{ matrix.app }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+  # ─── Deploy a staging ────────────────────────────────────────
+  deploy-staging:
+    name: Deploy a Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - name: Deploy a servidor staging
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/sgci
+            docker compose -f docker/docker-compose.yml pull
+            docker compose -f docker/docker-compose.yml up -d --no-deps api web portal
+            docker compose -f docker/docker-compose.yml exec api npx prisma migrate deploy
+            echo "✅ Deploy a staging completado: $(date)"
+
+  # ─── Deploy a producción ──────────────────────────────────────
+  deploy-production:
+    name: Deploy a Producción
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production  # Requiere aprobación manual en GitHub
+
+    steps:
+      - name: Deploy a servidor de producción
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/sgci
+            # Backup BD antes del deploy
+            pg_dump $DATABASE_URL > /opt/backups/sgci_$(date +%Y%m%d_%H%M%S).sql
+            # Pull nuevas imágenes
+            docker compose -f docker/docker-compose.yml pull api web portal
+            # Ejecutar migraciones (con rollback automático si falla)
+            docker compose -f docker/docker-compose.yml run --rm api npx prisma migrate deploy || { echo "❌ Migración falló — abortando deploy"; exit 1; }
+            # Actualizar sin tiempo fuera (rolling update)
+            docker compose -f docker/docker-compose.yml up -d --no-deps --scale api=2 api
+            sleep 15
+            docker compose -f docker/docker-compose.yml up -d --no-deps api web portal
+            echo "✅ Deploy a producción completado: $(date)"
+
+      - name: Notificar en Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} Deploy SGCI a producción: ${{ job.status }} | SHA: ${{ github.sha }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

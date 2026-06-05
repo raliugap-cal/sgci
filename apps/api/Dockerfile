@@ -1,7 +1,6 @@
 # ═══════════════════════════════════════════════════════════
 # SGCI API — Dockerfile (contexto: raíz del monorepo)
 # Railway build: docker build -f apps/api/Dockerfile .
-# Desarrollador: Miguel Angel Perez
 # ═══════════════════════════════════════════════════════════
 
 FROM node:20-alpine AS base
@@ -10,10 +9,14 @@ RUN apk add --no-cache libc6-compat openssl
 
 # ─── Dependencias ─────────────────────────────────────────
 FROM base AS deps
-COPY package.json ./
+# Copiar TODOS los package.json del monorepo + el lockfile raíz
+COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY apps/portal/package.json ./apps/portal/
 COPY packages/database/package.json ./packages/database/
-RUN npm install --workspaces --if-present
+# npm ci usa el lockfile exacto — no genera uno nuevo
+RUN npm ci --workspaces --if-present
 
 # ─── Build ────────────────────────────────────────────────
 FROM deps AS builder

@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { authApi } from '../../lib/api';
-import { useAuthStore } from '../../lib/auth-store';
+import { authApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),

@@ -10,8 +10,8 @@ import {
   BarChart2, TrendingUp, FileText, Download,
   Calendar, Users, Receipt, Activity,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { reportsApi } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { reportsApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const anioActual = new Date().getFullYear();

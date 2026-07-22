@@ -9,8 +9,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Shield, Download, FileText, User, Calendar, Receipt } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../../components/AppShell';
-import { patientsApi } from '../../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { patientsApi } from '@/lib/api';
 
 export default function ArcoPage() {
   const { id } = useParams<{ id: string }>();

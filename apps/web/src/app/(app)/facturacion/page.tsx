@@ -11,8 +11,8 @@ import {
   Receipt, Plus, CheckCircle, Clock, XCircle,
   Download, DollarSign, ChevronRight, AlertCircle,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { billingApi } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { billingApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const ESTADO_CFDI: Record<string, { label: string; color: string }> = {

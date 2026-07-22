@@ -12,9 +12,9 @@ import {
   Clock, User, CheckCircle, XCircle, RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../components/AppShell';
-import { appointmentsApi, adminApi } from '../../../lib/api';
-import { useAuthStore } from '../../../lib/auth-store';
+import AppShell from '@/components/AppShell';
+import { appointmentsApi, adminApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 import { clsx } from 'clsx';
 
 const HORAS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 – 20:00

@@ -5,13 +5,13 @@ import { useMutation } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../../components/AppShell';
-import { addictionsApi } from '../../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { addictionsApi } from '@/lib/api';
 
 export default function NuevoPTIPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { register, handleSubmit, control } = useForm({
+  const { register, handleSubmit, control } = useForm<any>({
     defaultValues: {
       modalidad: 'AMBULATORIO',
       sesionesSemMedico: 1, sesionesSemPsico: 1, sesionesSemGrupal: 0,

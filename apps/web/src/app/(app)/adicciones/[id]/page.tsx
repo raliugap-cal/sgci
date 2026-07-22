@@ -13,8 +13,8 @@ import {
   CheckCircle, AlertCircle, FileText, Plus, User,
 } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { addictionsApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { addictionsApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const ESTADO_COLOR: Record<string, string> = {

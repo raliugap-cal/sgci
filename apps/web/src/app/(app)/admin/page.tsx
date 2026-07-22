@@ -10,8 +10,8 @@ import {
   Settings, Link2, Pill, Package,
   CheckCircle, AlertCircle, Clock, Plus, Zap,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { adminApi } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { adminApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 function IntegrationCard({ label, status, detail, action }: {

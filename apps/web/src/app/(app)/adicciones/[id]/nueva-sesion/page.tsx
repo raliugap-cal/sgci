@@ -5,13 +5,13 @@ import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../../components/AppShell';
-import { addictionsApi } from '../../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { addictionsApi } from '@/lib/api';
 
 export default function NuevaSesionPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
     defaultValues: { tipoSesion: 'individual', huboConsumo: false },
   });
 
@@ -49,7 +49,7 @@ export default function NuevaSesionPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">¿Hubo consumo reportado?</label>
-                <select {...register('huboConsumo')}
+                <select {...(register as any)('huboConsumo')}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
                   <option value="">No reportado / Sin información</option>
                   <option value="false">No hubo consumo</option>
@@ -62,7 +62,7 @@ export default function NuevaSesionPage() {
             {String(huboConsumo) === 'true' && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                 <label className="block text-xs font-medium text-red-700 mb-1">Sustancias consumidas</label>
-                <input {...register('sustanciasConsumo')}
+                <input {...(register as any)('sustanciasConsumo')}
                   placeholder="Ej: alcohol, marihuana (separar con coma)"
                   className="w-full px-3 py-2 border border-red-200 bg-white rounded-lg text-sm" />
               </div>
@@ -71,10 +71,10 @@ export default function NuevaSesionPage() {
             {/* Objetivos */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Objetivos de la sesión *</label>
-              <input {...register('objetivosSesion', { required: 'Requerido' })}
+              <input {...(register as any)('objetivosSesion', { required: 'Requerido' })}
                 placeholder="Ej: Revisar estrategias de afrontamiento, trabajar duelo..."
-                className={`w-full px-3 py-2 border rounded-lg text-sm ${errors.objetivosSesion ? 'border-red-300' : 'border-slate-200'}`} />
-              {errors.objetivosSesion && <p className="text-red-600 text-xs mt-0.5">{errors.objetivosSesion.message}</p>}
+                className={`w-full px-3 py-2 border rounded-lg text-sm ${(errors as any).objetivosSesion ? 'border-red-300' : 'border-slate-200'}`} />
+              {(errors as any).objetivosSesion && <p className="text-red-600 text-xs mt-0.5">{(errors as any).objetivosSesion.message}</p>}
             </div>
 
             {/* Contenido de la sesión */}
@@ -84,20 +84,20 @@ export default function NuevaSesionPage() {
                 rows={6}
                 placeholder="Descripción detallada del desarrollo de la sesión, temas abordados, respuestas del paciente, observaciones clínicas..."
                 className={`w-full px-3 py-2 border rounded-lg text-sm resize-none ${errors.contenido ? 'border-red-300' : 'border-slate-200'}`} />
-              {errors.contenido && <p className="text-red-600 text-xs mt-0.5">{errors.contenido.message}</p>}
+              {errors.contenido && <p className="text-red-600 text-xs mt-0.5">{String(errors.contenido?.message ?? '')}</p>}
             </div>
 
             {/* Logros y tareas */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Logros observados</label>
-                <textarea {...register('logros')} rows={3}
+                <textarea {...(register as any)('logros')} rows={3}
                   placeholder="Avances, cambios positivos, habilidades desarrolladas..."
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Tareas y compromisos</label>
-                <textarea {...register('tareas')} rows={3}
+                <textarea {...(register as any)('tareas')} rows={3}
                   placeholder="Actividades para casa, compromisos del paciente..."
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" />
               </div>
@@ -106,7 +106,7 @@ export default function NuevaSesionPage() {
             {/* Próxima sesión */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Plan para próxima sesión</label>
-              <textarea {...register('proximaSesion')} rows={2}
+              <textarea {...(register as any)('proximaSesion')} rows={2}
                 placeholder="Temas a abordar en la siguiente sesión..."
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" />
             </div>

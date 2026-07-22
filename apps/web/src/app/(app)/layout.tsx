@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '../../lib/auth-store';
+import { useAuthStore } from '@/lib/auth-store';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

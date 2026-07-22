@@ -13,8 +13,8 @@ import {
   Save, PenLine, AlertTriangle, ChevronDown, ChevronRight,
   FlaskConical, Lock,
 } from 'lucide-react';
-import AppShell from '../../../../components/AppShell';
-import { hceApi, labApi, prescriptionsApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { hceApi, labApi, prescriptionsApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 type SoapForm = {

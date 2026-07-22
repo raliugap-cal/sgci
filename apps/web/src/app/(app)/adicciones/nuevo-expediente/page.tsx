@@ -9,8 +9,8 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Search, Heart, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { addictionsApi, patientsApi, adminApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { addictionsApi, patientsApi, adminApi } from '@/lib/api';
 
 const SUSTANCIAS = [
   'Alcohol', 'Marihuana / Cannabis', 'Cocaína', 'Crack',
@@ -31,7 +31,7 @@ export default function NuevoExpedienteAdiccionPage() {
   const [step, setStep] = useState<1|2|3>(1);
   const [selectedPaciente, setSelectedPaciente] = useState<any>(null);
   const [busqueda, setBusqueda] = useState('');
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
     defaultValues: { modalidad: 'AMBULATORIO', sustanciasSecundarias: [] },
   });
 

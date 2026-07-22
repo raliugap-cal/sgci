@@ -13,8 +13,8 @@ import {
   Stethoscope, Pill, FlaskConical, Heart,
 } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { patientsApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { patientsApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 function TimelineEntry({ consulta }: { consulta: any }) {

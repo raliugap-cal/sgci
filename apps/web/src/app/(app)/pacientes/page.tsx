@@ -12,8 +12,8 @@ import {
   Search, Plus, User, FileText, Calendar, Phone,
   ChevronRight, Filter, AlertTriangle,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { patientsApi } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { patientsApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 function AgeChip({ fecha }: { fecha: string }) {

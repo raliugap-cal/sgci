@@ -9,8 +9,8 @@ import {
   MapPin, Phone, Mail, X,
   Copy, Check, Search, UserPlus, AlertCircle,
 } from 'lucide-react';
-import { useAuthStore } from '../../../../lib/auth-store';
-import { api } from '../../../../lib/api';
+import { useAuthStore } from '@/lib/auth-store';
+import { api } from '@/lib/api';
 
 // ─── Tipos ────────────────────────────────────────────────
 interface Sede {

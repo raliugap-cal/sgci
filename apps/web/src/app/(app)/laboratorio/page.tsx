@@ -11,8 +11,8 @@ import {
   FlaskConical, AlertTriangle, CheckCircle, Clock,
   Plus, ChevronRight, Beaker, Eye, Search,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { labApi } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { labApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const ESTADO_ORDEN: Record<string, { label: string; color: string; icon: any }> = {

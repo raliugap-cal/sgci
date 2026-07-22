@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 import { forwardRef, ReactNode, useState } from 'react';
 import { X, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 // ─── Button ───────────────────────────────────────────────
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

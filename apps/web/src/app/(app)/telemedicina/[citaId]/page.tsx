@@ -7,9 +7,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Mic, MicOff, Video, VideoOff, Phone, Users } from 'lucide-react';
-import AppShell from '../../../../components/AppShell';
-import { appointmentsApi } from '../../../../lib/api';
-import { useAuthStore } from '../../../../lib/auth-store';
+import AppShell from '@/components/AppShell';
+import { appointmentsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 export default function TelemedicinaPage() {
   const { citaId } = useParams<{ citaId: string }>();

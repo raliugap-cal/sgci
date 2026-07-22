@@ -1,0 +1,7 @@
+/* ── Añadir al final de apps/web/src/app/globals.css ── */
+
+.input-base {
+  @apply w-full px-3 py-2 text-sm border border-slate-200 rounded-lg
+         focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400
+         placeholder:text-slate-300 transition-colors;
+}

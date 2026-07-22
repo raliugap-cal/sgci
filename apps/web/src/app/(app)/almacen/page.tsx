@@ -9,8 +9,8 @@ import {
   Package, Plus, ArrowDown, ArrowUp, AlertTriangle,
   Clock, Search, BarChart3, Boxes,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { api } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { api } from '@/lib/api';
 import { clsx } from 'clsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';

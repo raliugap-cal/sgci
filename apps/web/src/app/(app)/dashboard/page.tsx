@@ -12,9 +12,9 @@ import {
   Clock, CheckCircle, XCircle, AlertTriangle, Video,
   ArrowRight, Plus,
 } from 'lucide-react';
-import AppShell from '../../components/AppShell';
-import { adminApi, appointmentsApi } from '../../lib/api';
-import { useAuthStore } from '../../lib/auth-store';
+import AppShell from '@/components/AppShell';
+import { adminApi, appointmentsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 import { clsx } from 'clsx';
 
 const hoy = format(new Date(), 'yyyy-MM-dd');

@@ -7,9 +7,9 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Search, Plus, X, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { labApi, patientsApi } from '../../../../lib/api';
-import { useAuthStore } from '../../../../lib/auth-store';
+import AppShell from '@/components/AppShell';
+import { labApi, patientsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 export default function NuevaOrdenLabPage() {
   const router = useRouter();

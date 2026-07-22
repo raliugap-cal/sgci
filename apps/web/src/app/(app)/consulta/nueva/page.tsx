@@ -8,9 +8,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ArrowLeft, Stethoscope } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../components/AppShell';
-import { appointmentsApi, hceApi, patientsApi } from '../../../lib/api';
-import { useAuthStore } from '../../../lib/auth-store';
+import AppShell from '@/components/AppShell';
+import { appointmentsApi, hceApi, patientsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 

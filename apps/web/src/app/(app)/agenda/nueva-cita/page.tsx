@@ -10,8 +10,8 @@ import { format, addDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Search, Calendar, Clock, User, Video, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { patientsApi, appointmentsApi, adminApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { patientsApi, appointmentsApi, adminApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const TIPO_CITA_OPTIONS = [

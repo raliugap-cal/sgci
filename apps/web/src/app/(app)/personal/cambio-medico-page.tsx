@@ -53,7 +53,7 @@ const ROL_COLOR: Record<string, string> = {
 
 // ── Formulario de nuevo usuario ────────────────────────────
 function NuevoUsuarioModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
     defaultValues: { roles: ['RECEPCION'] },
   });
   const selectedRoles = watch('roles') as string[];
@@ -73,12 +73,12 @@ function NuevoUsuarioModal({ onClose, onSuccess }: { onClose: () => void; onSucc
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Nombre *</label>
-              <input {...register('nombre', { required: true })}
+              <input {...(register as any)('nombre', { required: true })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Apellido paterno *</label>
-              <input {...register('apellidoPaterno', { required: true })}
+              <input {...(register as any)('apellidoPaterno', { required: true })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
             </div>
             <div>
@@ -88,14 +88,14 @@ function NuevoUsuarioModal({ onClose, onSuccess }: { onClose: () => void; onSucc
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Email *</label>
-              <input type="email" {...register('email', { required: true })}
+              <input type="email" {...(register as any)('email', { required: true })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Contraseña inicial *</label>
-            <input type="password" {...register('password', { required: true, minLength: 8 })}
+            <input type="password" {...(register as any)('password', { required: true, minLength: 8 })}
               placeholder="Mínimo 8 caracteres"
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
           </div>

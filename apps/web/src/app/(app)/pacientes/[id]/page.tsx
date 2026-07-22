@@ -13,8 +13,8 @@ import {
   Heart, AlertTriangle, Phone, Mail, ArrowLeft,
   FileText, Shield, Plus, ExternalLink, CheckCircle,
 } from 'lucide-react';
-import AppShell from '../../../../components/AppShell';
-import { patientsApi, appointmentsApi, billingApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { patientsApi, appointmentsApi, billingApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {

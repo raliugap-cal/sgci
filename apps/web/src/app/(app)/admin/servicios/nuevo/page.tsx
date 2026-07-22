@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { adminApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { adminApi } from '@/lib/api';
 
 export default function NuevoServicioPage() {
   const router = useRouter();

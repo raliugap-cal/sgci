@@ -13,8 +13,8 @@ import {
   Pill, Plus, Search, Trash2, AlertTriangle,
   CheckCircle, Download, ChevronRight, QrCode,
 } from 'lucide-react';
-import AppShell from '../../../components/AppShell';
-import { prescriptionsApi, patientsApi } from '../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { prescriptionsApi, patientsApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const TIPO_RECETA = [

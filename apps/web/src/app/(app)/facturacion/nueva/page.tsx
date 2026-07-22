@@ -9,8 +9,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Search } from 'lucide-react';
 import Link from 'next/link';
-import AppShell from '../../../../components/AppShell';
-import { billingApi, patientsApi } from '../../../../lib/api';
+import AppShell from '@/components/AppShell';
+import { billingApi, patientsApi } from '@/lib/api';
 
 export default function NuevaFacturaPage() {
   const router = useRouter();

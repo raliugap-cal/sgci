@@ -10,8 +10,8 @@ import {
   BarChart2, Settings, LogOut, ChevronDown, Bell, Search,
   Heart, ClipboardList, Menu, X, Shield, Stethoscope,
 } from 'lucide-react';
-import { useAuthStore } from '../../lib/auth-store';
-import { authApi } from '../../lib/api';
+import { useAuthStore } from '@/lib/auth-store';
+import { authApi } from '@/lib/api';
 import { clsx } from 'clsx';
 
 const NAV_ITEMS = [

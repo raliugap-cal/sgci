@@ -26,6 +26,7 @@ import { FilesModule } from '../files/files.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditService } from '../common/services/audit.service';
 import { BillingService } from './billing.service';
+import { BillingController } from './billing.controller';
 import { PacService } from './services/pac.service';
 import { SatService } from './services/sat.service';
 import { QuickBooksService } from './services/quickbooks.service';

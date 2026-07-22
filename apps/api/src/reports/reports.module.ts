@@ -3,7 +3,7 @@
 // CONADIC · NOM-004 · Financieros · KPIs operativos
 // ═══════════════════════════════════════════════════════════
 import { Injectable, Logger } from '@nestjs/common';
-import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
@@ -11,6 +11,7 @@ import { BillingService } from '../billing/billing.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser, SedeId } from '../auth/strategies/jwt.strategy';
 import { Rol, EstadoCFDI } from '@prisma/client';
 import { PrismaModule } from '../database/prisma.module';
+import { BillingModule } from '../billing/billing.module';
 
 @Injectable()
 export class ReportsService {
@@ -55,7 +56,7 @@ export class ReportsService {
 
     const tasaCompletadas = totalCitas > 0 ? (citasCompletadas / totalCitas * 100).toFixed(1) : '0';
     const tasaCancelacion = totalCitas > 0 ? (citasCanceladas / totalCitas * 100).toFixed(1) : '0';
-    const tasaNoShow = totalCitas > 0 ? (citasNoShow / totalCitas * 100).toFixed(1) : '0';
+    const tasaNoShow      = totalCitas > 0 ? (citasNoShow      / totalCitas * 100).toFixed(1) : '0';
 
     return {
       periodo: { desde, hasta },
@@ -74,7 +75,7 @@ export class ReportsService {
       consultas: { total: totalConsultas },
       financiero: {
         totalFacturado: Number(totalFacturado._sum.total ?? 0).toFixed(2),
-        totalCobrado: Number(totalCobrado._sum.montoPagado ?? 0).toFixed(2),
+        totalCobrado:   Number(totalCobrado._sum.montoPagado ?? 0).toFixed(2),
         saldo: (Number(totalFacturado._sum.total ?? 0) - Number(totalCobrado._sum.montoPagado ?? 0)).toFixed(2),
       },
     };
@@ -98,28 +99,25 @@ export class ReportsService {
         paciente: { sedeId },
         OR: [
           { fechaIngreso: { gte: desde, lte: hasta } },
-          { fechaEgreso: { gte: desde, lte: hasta } },
+          { fechaEgreso:  { gte: desde, lte: hasta } },
           { AND: [{ fechaIngreso: { lte: desde } }, { OR: [{ fechaEgreso: null }, { fechaEgreso: { gte: hasta } }] }] },
         ],
       },
       include: { paciente: true },
     });
 
-    // Estructurar datos según formato CONADIC
-    const ingresos = expedientes.filter(e => e.fechaIngreso >= desde && e.fechaIngreso <= hasta);
-    const egresos = expedientes.filter(e => e.fechaEgreso && e.fechaEgreso >= desde && e.fechaEgreso <= hasta);
+    const ingresos    = expedientes.filter(e => e.fechaIngreso >= desde && e.fechaIngreso <= hasta);
+    const egresos     = expedientes.filter(e => e.fechaEgreso && e.fechaEgreso >= desde && e.fechaEgreso <= hasta);
     const continuacion = expedientes.filter(e => e.fechaIngreso < desde && (!e.fechaEgreso || e.fechaEgreso > hasta));
 
     const porSustancia = this.groupBy(expedientes, 'sustanciaPrincipal');
     const porModalidad = this.groupBy(expedientes, 'modalidad');
-    const porEstado = this.groupBy(expedientes, 'estadoTratamiento');
-    const porSexo = this.groupBy(expedientes.map(e => ({ sexo: e.paciente.sexo })), 'sexo');
+    const porEstado    = this.groupBy(expedientes, 'estadoTratamiento');
+    const porSexo      = this.groupBy(expedientes.map(e => ({ sexo: e.paciente.sexo })), 'sexo');
 
     return {
       metadata: {
-        unidad: sedeId,
-        anio,
-        trimestre,
+        unidad: sedeId, anio, trimestre,
         periodo: { inicio, fin },
         generadoAt: new Date().toISOString(),
         nota: 'Datos preliminares — requieren revisión y firma del responsable antes de enviar a CONADIC',
@@ -141,7 +139,6 @@ export class ReportsService {
         estadoTratamiento: e.estadoTratamiento,
         fechaIngreso: e.fechaIngreso,
         fechaEgreso: e.fechaEgreso,
-        // Datos demográficos anonimizados (sin identificadores personales)
         sexo: e.paciente.sexo,
         edadInicio: e.edadInicio,
       })),
@@ -172,7 +169,6 @@ export class ReportsService {
     };
   }
 
-  // ─── Helper: agrupar por propiedad ───────────────────────
   private groupBy<T extends Record<string, any>>(arr: T[], key: string): Record<string, number> {
     return arr.reduce((acc, item) => {
       const val = String(item[key] ?? 'Sin definir');
@@ -238,7 +234,7 @@ export class ReportsController {
 
 // ─── Module ──────────────────────────────────────────────
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, BillingModule],
   controllers: [ReportsController],
   providers: [ReportsService],
   exports: [ReportsService],

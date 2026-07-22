@@ -1,12 +1,13 @@
 // ═══════════════════════════════════════════════════════════
-// MÉTODOS ADICIONALES — billing.service.extra.ts
-// findAll · findById · getCashRegisterHistory
-// Se integran al BillingService principal
+// MÉTODOS ADICIONALES — billing · appointments · patients · auth
 // ═══════════════════════════════════════════════════════════
+import { PrismaService } from '../../database/prisma.service';
+import { EstadoCFDI, EstadoCita } from '@prisma/client';
+import { NotFoundException } from '@nestjs/common';
+import { parseISO, startOfDay, endOfDay } from 'date-fns';
+import * as bcrypt from 'bcryptjs';
 
-import { PrismaService } from '../database/prisma.service';
-import { EstadoCFDI, EstadoPago } from '@prisma/client';
-
+// ─── Billing extras ──────────────────────────────────────
 export async function billingFindAll(
   prisma: PrismaService,
   opts: {
@@ -32,13 +33,11 @@ export async function billingFindAll(
   const [total, facturas] = await Promise.all([
     prisma.factura.count({ where }),
     prisma.factura.findMany({
-      where,
-      skip,
-      take: limit,
+      where, skip, take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         paciente: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true } },
-        cargos: { select: { concepto: true, total: true } },
+        cargos:   { select: { concepto: true, total: true } },
       },
     }),
   ]);
@@ -52,11 +51,11 @@ export async function billingFindById(prisma: PrismaService, facturaId: string, 
     include: {
       paciente: true,
       cargos: { include: { servicio: true } },
-      pagos: { orderBy: { createdAt: 'desc' } },
-      sede: { select: { nombre: true, rfc: true, razonSocial: true } },
+      pagos:  { orderBy: { createdAt: 'desc' } },
+      sede:   { select: { nombre: true, rfc: true, razonSocial: true } },
     },
   });
-  if (!f) throw new Error('Factura no encontrada');
+  if (!f) throw new NotFoundException('Factura no encontrada');
   return f;
 }
 
@@ -66,28 +65,18 @@ export async function getCashRegisterHistory(
   page: number,
 ) {
   const limit = 20;
-  const skip = (page - 1) * limit;
+  const skip  = (page - 1) * limit;
   const [total, cortes] = await Promise.all([
     prisma.cortesCaja.count({ where: { sedeId } }),
     prisma.cortesCaja.findMany({
-      where: { sedeId },
-      skip,
-      take: limit,
+      where: { sedeId }, skip, take: limit,
       orderBy: { fechaFin: 'desc' },
     }),
   ]);
   return prisma.paginate(cortes, total, page, limit);
 }
 
-// ═══════════════════════════════════════════════════════════
-// MÉTODOS ADICIONALES — appointments.service.extra.ts
-// findAll · findById (implementación final)
-// ═══════════════════════════════════════════════════════════
-
-import { NotFoundException } from '@nestjs/common';
-import { parseISO, startOfDay, endOfDay } from 'date-fns';
-import { EstadoCita } from '@prisma/client';
-
+// ─── Appointments extras ─────────────────────────────────
 export async function appointmentsFindAll(
   prisma: PrismaService,
   opts: {
@@ -104,8 +93,8 @@ export async function appointmentsFindAll(
   const skip = (page - 1) * limit;
 
   const where: any = { sedeId };
-  if (medicoId)    where.medicoId    = medicoId;
-  if (pacienteId)  where.pacienteId  = pacienteId;
+  if (medicoId)   where.medicoId   = medicoId;
+  if (pacienteId) where.pacienteId = pacienteId;
   if (fecha) {
     const d = parseISO(fecha);
     where.fechaInicio = { gte: startOfDay(d), lte: endOfDay(d) };
@@ -154,13 +143,7 @@ export async function appointmentsFindById(
   return cita;
 }
 
-// ═══════════════════════════════════════════════════════════
-// PARCHE — patients.service.extra.ts
-// signConsent — firma de consentimiento
-// ═══════════════════════════════════════════════════════════
-
-import * as bcrypt from 'bcryptjs';
-
+// ─── Patients extras ─────────────────────────────────────
 export async function signConsent(
   prisma: PrismaService,
   pacienteId: string,
@@ -172,25 +155,21 @@ export async function signConsent(
   const consentimiento = await prisma.consentimiento.findFirst({
     where: { pacienteId, tipo: tipo as any, vigente: true },
   });
-  if (!consentimiento) throw new Error(`Consentimiento de tipo ${tipo} no encontrado`);
+  if (!consentimiento) throw new NotFoundException(`Consentimiento de tipo ${tipo} no encontrado`);
 
   return prisma.consentimiento.update({
     where: { id: consentimiento.id },
     data: {
-      firmado: true,
+      firmado:     true,
       firmaBase64: firmaBase64 ?? null,
-      ipFirma: ip,
+      ipFirma:     ip,
       firmadoPorId,
-      firmadoAt: new Date(),
+      firmadoAt:   new Date(),
     },
   });
 }
 
-// ═══════════════════════════════════════════════════════════
-// PARCHE — auth.service.extra.ts
-// decodeMfaToken — para el controller de verificación MFA
-// ═══════════════════════════════════════════════════════════
-
+// ─── Auth extras ─────────────────────────────────────────
 export function decodeMfaToken(jwtService: any, token: string, secret: string): any {
   try {
     return jwtService.verify(token, { secret });

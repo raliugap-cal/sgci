@@ -23,8 +23,8 @@ interface StaffSyncPayload {
 interface PatientSyncPayload {
   pacienteId: string;
   lastSyncAt: string;
-  deviceId: string;
-  diaryEntries: {
+  deviceId?: string;
+  diaryEntries?: {
     id: string;
     expedienteAdiccionId: string;
     fecha: string;
@@ -36,13 +36,14 @@ interface PatientSyncPayload {
     notas?: string;
     timestampLocal: string;
   }[];
-  messages: {
+  messages?: {
     id: string;
     sedeId: string;
     asunto?: string;
     contenido: string;
     timestampLocal: string;
   }[];
+  records?: any[];
 }
 
 @Injectable()
@@ -54,13 +55,12 @@ export class SyncService {
     private audit: AuditService,
   ) {}
 
-  // ─── Sync del personal (tablets/laptops de la sede) ───────
+  // ─── Sync del personal (tablets/laptops de la sede) ──────
   async syncStaff(payload: StaffSyncPayload, actorId: string, sedeId: string, ip: string) {
     const { lastSyncAt, deviceId, records } = payload;
     const lastSync = new Date(lastSyncAt);
     const results = { synced: 0, conflicts: [] as any[], errors: [] as any[] };
 
-    // Procesar en orden cronológico por timestamp local
     const sorted = [...records].sort(
       (a, b) => new Date(a.timestampLocal).getTime() - new Date(b.timestampLocal).getTime(),
     );
@@ -79,28 +79,22 @@ export class SyncService {
       }
     }
 
-    // Retornar cambios del servidor desde lastSync
     const serverChanges = await this.getServerChangesForStaff(sedeId, actorId, lastSync);
 
     this.logger.log(
       `Sync staff: ${results.synced}/${records.length} sincronizados, ${results.conflicts.length} conflictos, ${results.errors.length} errores`,
     );
 
-    return {
-      ...results,
-      serverChanges,
-      syncedAt: new Date().toISOString(),
-    };
+    return { ...results, serverChanges, syncedAt: new Date().toISOString() };
   }
 
-  // ─── Sync del portal del paciente ─────────────────────────
+  // ─── Sync del portal del paciente ────────────────────────
   async syncPatient(payload: PatientSyncPayload, ip: string) {
     const { pacienteId, lastSyncAt, deviceId, diaryEntries, messages } = payload;
     const lastSync = new Date(lastSyncAt);
     const results = { synced: 0, conflicts: [] as any[], errors: [] as any[] };
 
-    // Sincronizar entradas del diario de adicciones
-    for (const entry of diaryEntries) {
+    for (const entry of (diaryEntries ?? [])) {
       try {
         await this.syncDiaryEntry(entry, pacienteId, deviceId);
         results.synced++;
@@ -109,8 +103,7 @@ export class SyncService {
       }
     }
 
-    // Sincronizar mensajes redactados offline
-    for (const msg of messages) {
+    for (const msg of (messages ?? [])) {
       try {
         await this.syncMessage(msg, pacienteId, deviceId);
         results.synced++;
@@ -119,14 +112,9 @@ export class SyncService {
       }
     }
 
-    // Obtener cambios del servidor para el paciente
     const serverChanges = await this.getServerChangesForPatient(pacienteId, lastSync);
 
-    return {
-      ...results,
-      serverChanges,
-      syncedAt: new Date().toISOString(),
-    };
+    return { ...results, serverChanges, syncedAt: new Date().toISOString() };
   }
 
   // ─── Precarga inicial para portal paciente ────────────────
@@ -141,7 +129,6 @@ export class SyncService {
       mensajes,
       expedienteAdiccion,
     ] = await Promise.all([
-      // Próximas 30 días + últimas 10
       this.prisma.cita.findMany({
         where: {
           pacienteId,
@@ -192,7 +179,6 @@ export class SyncService {
         orderBy: { createdAt: 'desc' },
         take: 20,
       }),
-      // Diario del mes actual si tiene expediente de adicciones
       this.prisma.diarioConsumo.findMany({
         where: {
           expediente: { pacienteId },
@@ -212,11 +198,11 @@ export class SyncService {
       mensajes,
       diarioMesActual: expedienteAdiccion,
       generadoAt: new Date().toISOString(),
-      ttlSeconds: 300, // Cliente debe refrescar cada 5 min cuando está online
+      ttlSeconds: 300,
     };
   }
 
-  // ─── Procesar registro offline del staff ─────────────────
+  // ─── Procesar registro offline del staff ──────────────────
   private async processStaffRecord(
     record: OfflineRecord,
     actorId: string,
@@ -225,21 +211,16 @@ export class SyncService {
     deviceId: string,
   ) {
     switch (record.type) {
-      case 'nota_clinica':
-        return this.syncNotaClinica(record, actorId, deviceId, ip);
-      case 'signos_vitales':
-        return this.syncSignosVitales(record, actorId, deviceId);
-      case 'nota_sesion':
-        return this.syncNotaSesion(record, actorId, deviceId);
-      default:
-        throw new Error(`Tipo de registro desconocido: ${record.type}`);
+      case 'nota_clinica':   return this.syncNotaClinica(record, actorId, ip);
+      case 'signos_vitales': return this.syncSignosVitales(record, actorId);
+      case 'nota_sesion':    return this.syncNotaSesion(record, actorId);
+      default: throw new Error(`Tipo de registro desconocido: ${record.type}`);
     }
   }
 
-  private async syncNotaClinica(record: OfflineRecord, actorId: string, deviceId: string, ip: string) {
-    const { consultaId, tipoNota, subjetivo, objetivo, evaluacion, plan, ...rest } = record.data;
+  private async syncNotaClinica(record: OfflineRecord, actorId: string, ip: string) {
+    const { consultaId, tipoNota, subjetivo, objetivo, evaluacion, plan } = record.data;
 
-    // Verificar conflicto: ¿alguien más editó esta nota online mientras estaba offline?
     const existing = await this.prisma.notaClinica.findFirst({
       where: { consultaId, medicoId: actorId },
     });
@@ -251,68 +232,65 @@ export class SyncService {
     }
 
     if (existing) {
-      // Detectar conflicto de edición
       const serverUpdatedAt = existing.updatedAt;
-      const localCreatedAt = new Date(record.timestampLocal);
+      const localCreatedAt  = new Date(record.timestampLocal);
       if (serverUpdatedAt > localCreatedAt && actorId !== existing.actorId) {
         const err: any = new Error('Conflicto: la nota fue modificada en otro dispositivo');
         err.code = 'CONFLICT';
         throw err;
       }
 
-      // Guardar versión anterior
       await this.prisma.versionNota.create({
         data: {
-          notaId: existing.id,
-          version: existing.version,
+          notaId:    existing.id,
+          version:   existing.version,
           contenido: { subjetivo: existing.subjetivo, objetivo: existing.objetivo, evaluacion: existing.evaluacion, plan: existing.plan },
           actorId,
         },
       });
 
-      // Actualizar con datos offline
       return this.prisma.notaClinica.update({
         where: { id: existing.id },
         data: {
-          subjetivo: subjetivo ?? existing.subjetivo,
-          objetivo: objetivo ?? existing.objetivo,
-          evaluacion: evaluacion ?? existing.evaluacion,
-          plan: plan ?? existing.plan,
-          version: { increment: 1 },
-          syncPending: false,
+          subjetivo:    subjetivo    ?? existing.subjetivo,
+          objetivo:     objetivo     ?? existing.objetivo,
+          evaluacion:   evaluacion   ?? existing.evaluacion,
+          plan:         plan         ?? existing.plan,
+          version:      { increment: 1 },
+          syncPending:  false,
           creadaOffline: false,
           actorId,
-          deviceId,
         },
       });
     }
 
-    // Crear nueva nota
     return this.prisma.notaClinica.create({
       data: {
         consultaId,
-        medicoId: actorId,
+        medicoId:     actorId,
         tipoNota,
         subjetivo,
         objetivo,
         evaluacion,
         plan,
-        syncPending: false,
+        syncPending:  false,
         creadaOffline: true,
-        deviceId,
         actorId,
       },
     });
   }
 
-  private async syncSignosVitales(record: OfflineRecord, actorId: string, deviceId: string) {
+  private async syncSignosVitales(record: OfflineRecord, actorId: string) {
     const { consultaId, ...vitales } = record.data;
+
+    // Eliminar campos que no existen en el schema
+    const { deviceId: _d, ...vitalData } = vitales;
 
     const existing = await this.prisma.signosVitales.findUnique({ where: { consultaId } });
     if (existing) {
       return this.prisma.signosVitales.update({
         where: { consultaId },
-        data: { ...vitales, syncPending: false, creadaOffline: true },
+        data: { ...vitalData, syncPending: false, creadaOffline: true },
       });
     }
 
@@ -320,48 +298,45 @@ export class SyncService {
       data: {
         consultaId,
         capturadoPorId: actorId,
-        ...vitales,
-        syncPending: false,
+        ...vitalData,
+        syncPending:  false,
         creadaOffline: true,
-        deviceId,
       },
     });
   }
 
-  private async syncNotaSesion(record: OfflineRecord, actorId: string, deviceId: string) {
-    const { id: remoteId, ...data } = record.data;
+  private async syncNotaSesion(record: OfflineRecord, actorId: string) {
+    const { id: _remoteId, deviceId: _d, ...data } = record.data;
     return this.prisma.notaSesion.create({
-      data: { ...data, registradoPorId: actorId, syncPending: false, actorId, deviceId },
+      data: { ...data, registradoPorId: actorId, syncPending: false } as any,
     });
   }
 
-  private async syncDiaryEntry(entry: any, pacienteId: string, deviceId: string) {
-    // Verificar que el expediente pertenece al paciente
+  private async syncDiaryEntry(entry: any, pacienteId: string, deviceId?: string) {
     const expediente = await this.prisma.expedienteAdiccion.findFirst({
       where: { id: entry.expedienteAdiccionId, pacienteId },
     });
     if (!expediente) throw new BadRequestException('Expediente no pertenece al paciente');
 
-    // Verificar duplicado por fecha
     const existing = await this.prisma.diarioConsumo.findFirst({
       where: {
         expedienteAdiccionId: entry.expedienteAdiccionId,
         fecha: new Date(entry.fecha),
       },
     });
+
     if (existing) {
-      // Si el registro online es más reciente que el offline, no sobrescribir
       if (existing.createdAt > new Date(entry.timestampLocal)) return existing;
       return this.prisma.diarioConsumo.update({
         where: { id: existing.id },
         data: {
-          huboConsumo: entry.huboConsumo,
-          sustancias: entry.sustancias ?? [],
-          estadoAnimo: entry.estadoAnimo,
+          huboConsumo:   entry.huboConsumo,
+          sustancias:    entry.sustancias ?? [],
+          estadoAnimo:   entry.estadoAnimo,
           nivelAnsiedad: entry.nivelAnsiedad,
           factoresRiesgo: entry.factoresRiesgo ?? [],
-          notas: entry.notas,
-          syncPending: false,
+          notas:         entry.notas,
+          syncPending:   false,
           creadoOffline: true,
           timestampLocal: new Date(entry.timestampLocal),
         },
@@ -371,28 +346,28 @@ export class SyncService {
     return this.prisma.diarioConsumo.create({
       data: {
         expedienteAdiccionId: entry.expedienteAdiccionId,
-        fecha: new Date(entry.fecha),
-        huboConsumo: entry.huboConsumo,
-        sustancias: entry.sustancias ?? [],
-        estadoAnimo: entry.estadoAnimo,
-        nivelAnsiedad: entry.nivelAnsiedad,
+        fecha:          new Date(entry.fecha),
+        huboConsumo:    entry.huboConsumo,
+        sustancias:     entry.sustancias ?? [],
+        estadoAnimo:    entry.estadoAnimo,
+        nivelAnsiedad:  entry.nivelAnsiedad,
         factoresRiesgo: entry.factoresRiesgo ?? [],
-        notas: entry.notas,
-        syncPending: false,
-        creadoOffline: true,
+        notas:          entry.notas,
+        syncPending:    false,
+        creadoOffline:  true,
         timestampLocal: new Date(entry.timestampLocal),
       },
     });
   }
 
-  private async syncMessage(msg: any, pacienteId: string, deviceId: string) {
+  private async syncMessage(msg: any, pacienteId: string, deviceId?: string) {
     return this.prisma.mensajePortal.create({
       data: {
         pacienteId,
-        sedeId: msg.sedeId,
-        asunto: msg.asunto,
-        contenido: msg.contenido,
-        syncPending: false,
+        sedeId:        msg.sedeId,
+        asunto:        msg.asunto,
+        contenido:     msg.contenido,
+        syncPending:   false,
         creadoOffline: true,
       },
     });

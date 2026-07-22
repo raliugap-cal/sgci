@@ -136,7 +136,7 @@ export class BillingService {
     // 3. Timbrar vía PAC
     let cfdiTimbrado: { uuid: string; xmlTimbrado: string; fechaTimbrado: Date };
     try {
-      cfdiTimbrado = await this.pac.timbraComprobante(factura.sede, cfdiXml);
+      cfdiTimbrado = await this.pac.timbraComprobante(factura.sede?.rfc ?? factura.sedeId, cfdiXml);
     } catch (e) {
       this.logger.error(`Error PAC al timbrar factura ${facturaId}: ${e.message}`);
       throw new InternalServerErrorException('Error al timbrar con el PAC. Intente nuevamente.');
@@ -254,7 +254,7 @@ export class BillingService {
     if (!factura?.cfdiUuid) throw new BadRequestException('No hay CFDI timbrado para cancelar');
 
     // Cancelar ante el SAT vía PAC
-    await this.pac.cancelarComprobante(factura.sede, factura.cfdiUuid, motivo);
+    await this.pac.cancelarComprobante(factura.sede?.rfc ?? factura.sedeId, factura.cfdiUuid, motivo);
 
     const updated = await this.prisma.factura.update({
       where: { id: facturaId },

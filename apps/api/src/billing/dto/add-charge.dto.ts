@@ -6,7 +6,7 @@ export class AddChargeDto {
   @IsString() @IsOptional() claveUnidadSAT?: string;
   @IsString() @IsOptional() servicioId?: string;
   @IsNumber() @Min(0) precioUnitario: number;
-  @IsNumber() @Min(1) cantidad: number;
+  @IsNumber() @IsOptional() @Min(0) cantidad?: number;
   @IsBoolean() @IsOptional() ivaAplicable?: boolean;
   @IsNumber() @IsOptional() tasaIva?: number;
   @IsNumber() @IsOptional() descuento?: number;

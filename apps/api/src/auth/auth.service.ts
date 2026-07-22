@@ -1,38 +1,10 @@
 // ═══════════════════════════════════════════════════════════
-// AUTH MODULE — JWT + MFA TOTP + Refresh Token Rotation
+// AUTH SERVICE — JWT + MFA TOTP + Refresh Token Rotation
 // ═══════════════════════════════════════════════════════════
-
-// ─── auth.module.ts ─────────────────────────────────────────
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
-import { PrismaModule } from '../database/prisma.module';
-
-// ─────────────────────────────────────────────────────────────
-export const AuthModuleDef = {
-  imports: [
-    PrismaModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '30m', issuer: 'sgci', audience: 'sgci-staff' },
-      }),
-    }),
-  ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
-  exports: [AuthService, JwtModule],
-};
-
-// ─── auth.service.ts ────────────────────────────────────────
-import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable, UnauthorizedException, ForbiddenException,
+  BadRequestException, Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
@@ -54,7 +26,7 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
-  // ─── Validar usuario en login ──────────────────────────────
+  // ─── Validar usuario en login ─────────────────────────────
   async validateUser(email: string, password: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email: email.toLowerCase().trim() },
@@ -65,7 +37,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Verificar bloqueo por intentos fallidos
     if (usuario.bloqueadoHasta && usuario.bloqueadoHasta > new Date()) {
       const minutos = Math.ceil((usuario.bloqueadoHasta.getTime() - Date.now()) / 60000);
       throw new ForbiddenException(`Cuenta bloqueada. Intente en ${minutos} minutos`);
@@ -94,7 +65,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Reset de intentos fallidos
     await this.prisma.usuario.update({
       where: { id: usuario.id },
       data: { intentosFallidos: 0, bloqueadoHasta: null },
@@ -103,9 +73,8 @@ export class AuthService {
     return usuario;
   }
 
-  // ─── Login completo ────────────────────────────────────────
+  // ─── Login completo ───────────────────────────────────────
   async login(usuario: any, ip: string, userAgent: string) {
-    // Si tiene MFA activo, retornar token temporal
     if (usuario.mfaActivo) {
       const mfaToken = this.jwt.sign(
         { sub: usuario.id, mfa_pending: true },
@@ -113,11 +82,10 @@ export class AuthService {
       );
       return { mfaRequired: true, mfaToken };
     }
-
     return this.generateTokenPair(usuario, ip, userAgent);
   }
 
-  // ─── Verificar MFA TOTP ────────────────────────────────────
+  // ─── Verificar MFA TOTP ───────────────────────────────────
   async verifyMfa(userId: string, code: string, ip: string, userAgent: string) {
     const usuario = await this.prisma.usuario.findUniqueOrThrow({
       where: { id: userId },
@@ -132,11 +100,9 @@ export class AuthService {
     const valido = authenticator.verify({ token: code, secret: secreto });
 
     if (!valido) {
-      // También verificar backup codes
       const idx = usuario.mfaBackupCodes.indexOf(code);
       if (idx === -1) throw new UnauthorizedException('Código MFA inválido');
 
-      // Consumir backup code (de un solo uso)
       const nuevosCodes = usuario.mfaBackupCodes.filter((_, i) => i !== idx);
       await this.prisma.usuario.update({
         where: { id: usuario.id },
@@ -154,7 +120,6 @@ export class AuthService {
     const otpauth = authenticator.keyuri(usuario.email, 'SGCI Clínica', secret);
     const qrDataUrl = await toDataURL(otpauth);
 
-    // Guardar secreto cifrado (se confirma cuando el usuario verifica con el primer código)
     await this.prisma.usuario.update({
       where: { id: userId },
       data: { mfaSecret: this.encryptField(secret) },
@@ -172,7 +137,6 @@ export class AuthService {
     const valido = authenticator.verify({ token: code, secret: secreto });
     if (!valido) throw new UnauthorizedException('Código MFA inválido');
 
-    // Generar backup codes
     const backupCodes = Array.from({ length: 8 }, () =>
       randomBytes(4).toString('hex').toUpperCase(),
     );
@@ -196,7 +160,6 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
 
-    // Rotación: revocar el anterior y crear uno nuevo
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
@@ -213,12 +176,11 @@ export class AuthService {
     });
   }
 
-  // ─── Decodificar token MFA temporal ─────────────────────
+  // ─── Decodificar token MFA temporal ──────────────────────
   decodeMfaToken(token: string): any {
     try {
       return this.jwt.verify(token, {
         secret: this.config.getOrThrow('JWT_SECRET'),
-        issuer: 'sgci',
       });
     } catch {
       throw new UnauthorizedException('Token MFA inválido o expirado');
@@ -232,9 +194,8 @@ export class AuthService {
       include: { medico: true },
     });
 
-    // Verificar que el usuario pertenece a la sede
-    const perteneceASede = usuario.sedeId === sedeId ||
-      usuario.roles.includes('SUPERADMIN');
+    const perteneceASede =
+      usuario.sedeId === sedeId || usuario.roles.includes('SUPERADMIN' as any);
 
     if (!perteneceASede) {
       throw new ForbiddenException('No tiene acceso a esta sede');
@@ -244,39 +205,35 @@ export class AuthService {
     return { accessToken: this.jwt.sign(payload) };
   }
 
-  // ─── Helpers privados ────────────────────────────────────
+  // ─── Helpers privados ─────────────────────────────────────
   private async generateTokenPair(usuario: any, ip: string, userAgent: string) {
-    const sedeId = usuario.sedeId;
+    const sedeId  = usuario.sedeId;
     const payload = this.buildJwtPayload(usuario, sedeId);
-
     const accessToken = this.jwt.sign(payload);
 
-    // Refresh token: 7 días, guardado en BD
     const refreshTokenStr = randomBytes(48).toString('hex');
     await this.prisma.refreshToken.create({
       data: {
         usuarioId: usuario.id,
-        token: refreshTokenStr,
+        token:     refreshTokenStr,
         expiresAt: addDays(new Date(), 7),
         ipAddress: ip,
         userAgent,
       },
     });
 
-    // Actualizar último acceso
     await this.prisma.usuario.update({
       where: { id: usuario.id },
-      data: { ultimoAcceso: new Date() },
+      data:  { ultimoAcceso: new Date() },
     });
 
-    // Log de auditoría
     await this.prisma.auditoria.create({
       data: {
-        actorId: usuario.id,
-        actorRol: usuario.roles[0],
+        actorId:    usuario.id,
+        actorRol:   usuario.roles[0],
         actorEmail: usuario.email,
-        sedeId: usuario.sedeId,
-        accion: 'LOGIN',
+        sedeId:     usuario.sedeId,
+        accion:     'LOGIN',
         recursoTipo: 'sesion',
         ip,
         userAgent,
@@ -286,13 +243,13 @@ export class AuthService {
     return {
       accessToken,
       refreshToken: refreshTokenStr,
-      expiresIn: 1800, // 30 min en segundos
+      expiresIn: 1800,
       user: {
-        id: usuario.id,
-        nombre: `${usuario.nombre} ${usuario.apellidoPaterno}`,
-        email: usuario.email,
-        roles: usuario.roles,
-        sedeId: usuario.sedeId,
+        id:       usuario.id,
+        nombre:   `${usuario.nombre} ${usuario.apellidoPaterno}`,
+        email:    usuario.email,
+        roles:    usuario.roles,
+        sedeId:   usuario.sedeId,
         medicoId: usuario.medico?.id ?? null,
       },
     };
@@ -300,26 +257,24 @@ export class AuthService {
 
   private buildJwtPayload(usuario: any, sedeId: string) {
     return {
-      sub: usuario.id,
-      email: usuario.email,
-      roles: usuario.roles,
+      sub:      usuario.id,
+      email:    usuario.email,
+      roles:    usuario.roles,
       sedeId,
       medicoId: usuario.medico?.id ?? null,
-      iat: Math.floor(Date.now() / 1000),
+      iat:      Math.floor(Date.now() / 1000),
     };
   }
 
-  // Cifrado simple AES para campos sensibles en memoria
-  // En producción usar KMS para la clave maestra
   private encryptField(value: string): string {
     const key = this.config.getOrThrow<string>('ENCRYPTION_KEY');
-    // Implementación real usaría crypto.createCipheriv con IV aleatorio
-    // Simplificado para legibilidad; en producción usar crypto estándar
     return Buffer.from(`${key.substring(0, 8)}:${value}`).toString('base64');
   }
 
-  private decryptField(encrypted: string): string {
-    const decoded = Buffer.from(encrypted, 'base64').toString();
-    return decoded.split(':').slice(1).join(':');
+  private decryptField(encrypted: any): string {
+    if (!encrypted) return '';
+    if (typeof encrypted === 'string') return encrypted;
+    if (Buffer.isBuffer(encrypted)) return encrypted.toString('utf8');
+    return String(encrypted);
   }
 }

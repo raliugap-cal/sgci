@@ -14,6 +14,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser, SedeId, ClientIp } from '../auth/strategies/jwt.strategy';
 import { Rol, TipoReceta, EstadoReceta } from '@prisma/client';
 import { PrismaModule } from '../database/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { FilesModule } from '../files/files.module';
 import { generateRecetaNumber } from '../common/utils/generators';
 import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsUUID, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -302,7 +304,7 @@ export class PrescriptionsController {
 
 // ─── Module ──────────────────────────────────────────────
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule, FilesModule],
   controllers: [PrescriptionsController],
   providers: [PrescriptionsService, AuditService],
   exports: [PrescriptionsService],

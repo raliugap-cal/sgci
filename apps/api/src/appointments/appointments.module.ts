@@ -18,6 +18,7 @@ import { AppointmentsService } from './appointments.service';
 import { TelemedicineModule } from '../telemedicine/telemedicine.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PrismaModule } from '../database/prisma.module';
+import { AuditService } from '../common/services/audit.service';
 import {
   JwtAuthGuard, RolesGuard, Roles, CurrentUser,
   ClientIp, SedeId,
@@ -141,7 +142,7 @@ export class AppointmentsController {
 @Module({
   imports: [PrismaModule, TelemedicineModule, NotificationsModule],
   controllers: [AppointmentsController],
-  providers: [AppointmentsService],
+  providers: [AppointmentsService, AuditService],
   exports: [AppointmentsService],
 })
 export class AppointmentsModule {}

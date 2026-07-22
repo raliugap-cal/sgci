@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',       // Requerido para Dockerfile multi-stage
-  transpilePackages: ['@sgci/shared'],
+  
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.daily.co' },

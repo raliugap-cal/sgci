@@ -13,6 +13,8 @@ import { AuditService } from '../common/services/audit.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser, SedeId, ClientIp } from '../auth/strategies/jwt.strategy';
 import { Rol, EstadoOrden } from '@prisma/client';
 import { PrismaModule } from '../database/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { FilesModule } from '../files/files.module';
 import { generateBarCode } from '../common/utils/generators';
 import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsUUID } from 'class-validator';
 
@@ -287,7 +289,7 @@ export class LabController {
 
 // ─── Module ──────────────────────────────────────────────
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule, FilesModule],
   controllers: [LabController],
   providers: [LabService, AuditService],
   exports: [LabService],

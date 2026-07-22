@@ -294,7 +294,7 @@ export class AppointmentsService {
   async cancel(citaId: string, motivo: string, actorId: string, sedeId: string, ip: string) {
     const cita = await this.prisma.cita.findFirst({ where: { id: citaId, sedeId } });
     if (!cita) throw new NotFoundException('Cita no encontrada');
-    if ([EstadoCita.COMPLETADA, EstadoCita.CANCELADA].includes(cita.estado)) {
+    if (([EstadoCita.COMPLETADA, EstadoCita.CANCELADA] as string[]).includes(cita.estado)) {
       throw new BadRequestException('No se puede cancelar una cita en este estado');
     }
 
@@ -420,7 +420,6 @@ export class AppointmentsService {
         expiresAt: { gt: new Date() },
         OR: [{ medicoId: null }, { medicoId }],
       },
-      include: { paciente: true },
       take: 3,
       orderBy: { createdAt: 'asc' },
     });

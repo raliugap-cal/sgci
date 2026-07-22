@@ -13,7 +13,7 @@ import { AuditService } from '../common/services/audit.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser, SedeId, ClientIp } from '../auth/strategies/jwt.strategy';
 import { Rol, EstadoOrden } from '@prisma/client';
 import { PrismaModule } from '../database/prisma.module';
-import { generateBarCode } from '../common/services/audit.service';
+import { generateBarCode } from '../common/utils/generators';
 import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsUUID } from 'class-validator';
 
 // ─── DTOs ────────────────────────────────────────────────

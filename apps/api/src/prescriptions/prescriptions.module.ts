@@ -14,7 +14,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser, SedeId, ClientIp } from '../auth/strategies/jwt.strategy';
 import { Rol, TipoReceta, EstadoReceta } from '@prisma/client';
 import { PrismaModule } from '../database/prisma.module';
-import { generateRecetaNumber } from '../common/services/audit.service';
+import { generateRecetaNumber } from '../common/utils/generators';
 import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsUUID, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import * as QRCode from 'qrcode';

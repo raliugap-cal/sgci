@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Video, ArrowLeft, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { portalApi } from '../../lib/sync';
+import { portalApi } from '@/lib/sync';
 
 export default function VideoconsultaPage() {
   const { citaId } = useParams<{ citaId: string }>();

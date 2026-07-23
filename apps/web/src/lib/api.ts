@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://sgciapi-production.up.railway.app';
 
 export function createApiClient(getToken: () => string | null, getSedeId: () => string | null): AxiosInstance {
   const client = axios.create({

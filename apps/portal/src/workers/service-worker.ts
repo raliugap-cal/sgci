@@ -38,7 +38,7 @@ const CACHEABLE_API_PATTERNS = [
 ];
 
 // ─── Instalación ─────────────────────────────────────────
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (event: any) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       console.log('[SW] Pre-cacheando assets estáticos');
@@ -48,7 +48,7 @@ self.addEventListener('install', (event) => {
 });
 
 // ─── Activación ──────────────────────────────────────────
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', (event: any) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
@@ -64,7 +64,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // ─── Interceptar requests ─────────────────────────────────
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (event: any) => {
   const { request } = event;
   const url = new URL(request.url);
 
@@ -165,7 +165,7 @@ async function networkOnlyWithOfflineQueue(request) {
 }
 
 // ─── Background Sync ─────────────────────────────────────
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync', (event: any) => {
   if (event.tag === 'offline-sync-queue') {
     event.waitUntil(processOfflineQueue());
   }
@@ -180,7 +180,7 @@ async function processOfflineQueue() {
 }
 
 // ─── Push Notifications ──────────────────────────────────
-self.addEventListener('push', (event) => {
+self.addEventListener('push', (event: any) => {
   if (!event.data) return;
 
   const data = event.data.json();

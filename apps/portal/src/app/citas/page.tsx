@@ -7,7 +7,7 @@ import { format, isFuture, isPast } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Video, Stethoscope, MapPin, CheckCircle, XCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { getAll } from '../../lib/offline-store';
+import { getAll } from '@/lib/offline-store';
 import { clsx } from 'clsx';
 
 const ESTADO_COLOR: Record<string, string> = {
@@ -19,7 +19,7 @@ const ESTADO_COLOR: Record<string, string> = {
   PROGRAMADA:  'bg-slate-100 text-slate-600',
 };
 
-export function CitasPage() {
+function CitasPage() {
   const [citas, setCitas] = useState<any[]>([]);
   const [tab, setTab] = useState<'proximas' | 'pasadas'>('proximas');
 

@@ -19,7 +19,7 @@ export default function PerfilPage() {
   const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [lastSync, setLastSync] = useState<string | null>(null);
-  const [online, setOnline] = useState(navigator.onLine);
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [pwaInstalled, setPwaInstalled] = useState(false);
 
   useEffect(() => {

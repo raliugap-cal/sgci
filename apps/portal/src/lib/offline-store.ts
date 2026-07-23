@@ -12,8 +12,8 @@ interface SgciDB extends DBSchema {
   allergies:     { key: string; value: any };
   prescriptions: { key: string; value: any };
   results:       { key: string; value: any };
-  messages:      { key: string; value: any; indexes: { 'by-pending': boolean } };
-  diary:         { key: string; value: any; indexes: { 'by-pending': boolean; 'by-date': string } };
+  messages:      { key: string; value: any; indexes?: any };
+  diary:         { key: string; value: any; indexes?: any };
   catalogs:      { key: string; value: any };
   meta:          { key: string; value: any };
 }

@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { portalApi } from '../../lib/sync';
-import { loadPrefetch } from '../../lib/offline-store';
+import { portalApi } from '@/lib/sync';
+import { loadPrefetch } from '@/lib/offline-store';
 import { Stethoscope, Wifi, Lock } from 'lucide-react';
 
 const schema = z.object({

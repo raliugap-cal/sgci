@@ -7,8 +7,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, MessageSquare, Send, Plus, Clock, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { getAll, saveOfflineMessage } from '../../lib/offline-store';
-import { useSync } from '../../lib/sync';
+import { getAll, saveOfflineMessage } from '@/lib/offline-store';
+import { useSync } from '@/lib/sync';
 import { clsx } from 'clsx';
 
 export default function MensajesPage() {

@@ -7,11 +7,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Pill, FlaskConical, Download, AlertTriangle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { getAll } from '../../lib/offline-store';
+import { getAll } from '@/lib/offline-store';
 import { clsx } from 'clsx';
 
 // ─── Recetas ────────────────────────────────────────────────
-export function RecetasPage() {
+function RecetasPage() {
   const [recetas, setRecetas] = useState<any[]>([]);
 
   useEffect(() => {

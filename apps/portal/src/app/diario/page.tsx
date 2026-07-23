@@ -15,8 +15,8 @@ import {
   TrendingDown, Calendar, Wifi, WifiOff,
 } from 'lucide-react';
 import Link from 'next/link';
-import { saveDiaryEntry, getAll } from '../../lib/offline-store';
-import { useSync } from '../../lib/sync';
+import { saveDiaryEntry, getAll } from '@/lib/offline-store';
+import { useSync } from '@/lib/sync';
 import { clsx } from 'clsx';
 
 const diarySchema = z.object({

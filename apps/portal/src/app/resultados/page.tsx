@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, FlaskConical, Download, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { getAll } from '../../lib/offline-store';
+import { getAll } from '@/lib/offline-store';
 import { clsx } from 'clsx';
 
 export default function ResultadosPage() {

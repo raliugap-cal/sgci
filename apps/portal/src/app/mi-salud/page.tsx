@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, Pill, Stethoscope, Info, Shield } from 'lucide-react';
-import { getAll } from '../../lib/offline-store';
+import { getAll } from '@/lib/offline-store';
 import { clsx } from 'clsx';
 
 function Section({ title, icon: Icon, color, children, empty }: any) {

@@ -10,7 +10,7 @@ import {
   Wifi, WifiOff, Smartphone, CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { getMeta } from '../../lib/offline-store';
+import { getMeta } from '@/lib/offline-store';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { clsx } from 'clsx';

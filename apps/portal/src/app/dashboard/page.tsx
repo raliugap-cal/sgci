@@ -12,8 +12,8 @@ import {
   Heart, Wifi, WifiOff, RefreshCw, AlertCircle, ChevronRight,
   Clock, CheckCircle, Video,
 } from 'lucide-react';
-import { useSync } from '../../lib/sync';
-import { getAll, getMeta } from '../../lib/offline-store';
+import { useSync } from '@/lib/sync';
+import { getAll, getMeta } from '@/lib/offline-store';
 import { clsx } from 'clsx';
 
 function OfflineIndicator({ online, syncing, pendingCount, onSync }: any) {

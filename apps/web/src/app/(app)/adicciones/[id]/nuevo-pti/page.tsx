@@ -22,7 +22,7 @@ export default function NuevoPTIPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'objetivosEspecificos' });
 
   const mutation = useMutation({
-    mutationFn: (d: any) => addictionsApi.createPlan({
+    mutationFn: (d: any) => addictionsApi.createPti(id as string, {
       ...d,
       expedienteAdiccionId: id,
       objetivosEspecificos: d.objetivosEspecificos.map((o: any) => o.texto).filter(Boolean),

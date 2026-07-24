@@ -5,24 +5,31 @@ import { useAuthStore } from '@/lib/auth-store';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const user = useAuthStore((s) => s.user);
-  const [hydrated, setHydrated] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    setHydrated(true);
+    // Leer directamente desde localStorage — fuente de verdad
+    const token = localStorage.getItem('accessToken');
+    const stored = localStorage.getItem('sgci-auth');
+    
+    if (token && stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed?.state?.accessToken && parsed?.state?.user) {
+          setAuthed(true);
+          setReady(true);
+          return;
+        }
+      } catch {}
+    }
+    
+    setAuthed(false);
+    setReady(true);
+    router.replace('/login');
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    console.log('[AppLayout] accessToken:', !!accessToken, 'user:', !!user);
-    if (!accessToken || !user) {
-      console.log('[AppLayout] No auth — redirecting to login');
-      router.replace('/login');
-    }
-  }, [hydrated, accessToken, user]);
-
-  if (!hydrated || !accessToken || !user) {
+  if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -32,6 +39,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  if (!authed) return null;
 
   return <>{children}</>;
 }

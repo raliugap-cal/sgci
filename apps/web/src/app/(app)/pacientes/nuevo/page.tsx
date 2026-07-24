@@ -56,7 +56,7 @@ export default function NuevoPacientePage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (d: Form) => patientsApi.create(d),
+    mutationFn: (d: Form) => { const { consentimientoLFPDPPP, ...rest } = d; return patientsApi.create(rest); },
     onSuccess: (res) => router.push(`/pacientes/${res.data.id}`),
   });
 

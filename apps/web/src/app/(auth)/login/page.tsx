@@ -1,36 +1,25 @@
 'use client';
 // ═══════════════════════════════════════════════════════════
 // LOGIN PAGE — /login
-// Email + contraseña → MFA TOTP (si activado)
+// JWT + MFA TOTP
 // ═══════════════════════════════════════════════════════════
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { authApi } from '@/lib/api';
+import { Eye, EyeOff, Shield } from 'lucide-react';
 
-const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(8, 'Mínimo 8 caracteres'),
-});
-
-const mfaSchema = z.object({
-  code: z.string().length(6, 'Código de 6 dígitos requerido'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
-type MfaForm = z.infer<typeof mfaSchema>;
+interface LoginForm { email: string; password: string; }
+interface MfaForm   { code: string; }
 
 export default function LoginPage() {
-  const router = useRouter();
   const { setSession, setMfaPending, mfaPending, mfaToken } = useAuthStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [showPass, setShowPass] = useState(false);
 
-  const loginForm = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
-  const mfaForm = useForm<MfaForm>({ resolver: zodResolver(mfaSchema) });
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const { register: regMfa, handleSubmit: handleMfaSubmit, formState: { errors: mfaErrors } } = useForm<MfaForm>();
 
   const handleLogin = async (data: LoginForm) => {
     setLoading(true);
@@ -41,7 +30,8 @@ export default function LoginPage() {
         setMfaPending(res.mfaToken);
       } else {
         setSession(res);
-        router.push('/dashboard');
+        // Usar window.location para garantizar que localStorage se persista antes de navegar
+        window.location.href = '/dashboard';
       }
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Error al iniciar sesión');
@@ -57,7 +47,7 @@ export default function LoginPage() {
     try {
       const { data: res } = await authApi.verifyMfa(mfaToken, data.code);
       setSession(res);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Código MFA inválido');
     } finally {
@@ -66,109 +56,109 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-
-        {/* Logo / Identidad */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">🏥</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">SGCI Clínica</h1>
-          <p className="text-slate-500 text-sm mt-1">Sistema de Gestión Clínica Integral</p>
+          <img src="/logotipo.jpeg" alt="SGCI" className="h-16 w-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg" />
+          <h1 className="text-2xl font-bold text-white">SGCI</h1>
+          <p className="text-blue-300 text-sm mt-1">Sistema de Gestión Clínica Integral</p>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          {!mfaPending ? (
+            <>
+              <h2 className="text-lg font-bold text-slate-800 mb-6">Iniciar sesión</h2>
+              <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Correo electrónico</label>
+                  <input
+                    type="email"
+                    {...register('email', { required: 'Requerido' })}
+                    placeholder="usuario@clinica.mx"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  {errors.email && <p className="text-red-500 text-xs mt-0.5">{errors.email.message}</p>}
+                </div>
 
-        {!mfaPending ? (
-          /* ─── Formulario de Login ─── */
-          <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico</label>
-              <input
-                {...loginForm.register('email')}
-                type="email"
-                autoComplete="email"
-                placeholder="medico@clinica.mx"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-              {loginForm.formState.errors.email && (
-                <p className="text-red-600 text-xs mt-1">{loginForm.formState.errors.email.message}</p>
-              )}
-            </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Contraseña</label>
+                  <div className="relative">
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      {...register('password', { required: 'Requerido', minLength: { value: 8, message: 'Mínimo 8 caracteres' } })}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {errors.password && <p className="text-red-500 text-xs mt-0.5">{errors.password.message}</p>}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-              <input
-                {...loginForm.register('password')}
-                type="password"
-                autoComplete="current-password"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-              {loginForm.formState.errors.password && (
-                <p className="text-red-600 text-xs mt-1">{loginForm.formState.errors.password.message}</p>
-              )}
-            </div>
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-            </button>
-          </form>
-        ) : (
-          /* ─── Formulario MFA ─── */
-          <form onSubmit={mfaForm.handleSubmit(handleMfa)} className="space-y-4">
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">🔐</span>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {loading ? 'Verificando...' : 'Entrar'}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-6">
+                <Shield size={20} className="text-blue-600" />
+                <h2 className="text-lg font-bold text-slate-800">Verificación MFA</h2>
               </div>
-              <h2 className="font-semibold text-slate-900">Verificación en dos pasos</h2>
-              <p className="text-slate-500 text-sm mt-1">Ingrese el código de su app de autenticación</p>
-            </div>
+              <p className="text-sm text-slate-500 mb-4">Ingresa el código de 6 dígitos de tu aplicación autenticadora.</p>
+              <form onSubmit={handleMfaSubmit(handleMfa)} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Código MFA</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    {...regMfa('code', { required: 'Requerido', minLength: { value: 6, message: '6 dígitos' } })}
+                    placeholder="000000"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  {mfaErrors.code && <p className="text-red-500 text-xs mt-0.5">{mfaErrors.code.message}</p>}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Código de 6 dígitos</label>
-              <input
-                {...mfaForm.register('code')}
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="123456"
-                autoFocus
-                className="w-full px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest font-mono"
-              />
-              {mfaForm.formState.errors.code && (
-                <p className="text-red-600 text-xs mt-1 text-center">{mfaForm.formState.errors.code.message}</p>
-              )}
-            </div>
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Verificando...' : 'Verificar código'}
-            </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  Verificar
+                </button>
+              </form>
+            </>
+          )}
+        </div>
 
-            <button
-              type="button"
-              onClick={() => useAuthStore.getState().clearSession()}
-              className="w-full py-2 text-slate-500 text-sm hover:text-slate-700"
-            >
-              Volver al login
-            </button>
-          </form>
-        )}
-
-        <p className="text-center text-xs text-slate-400 mt-6">
-          SGCI v2.1 · NOM-004 · NOM-028 · CFDI 4.0
+        <p className="text-center text-blue-400 text-xs mt-6">
+          © {new Date().getFullYear()} SGCI — Admon360Corp
         </p>
       </div>
     </div>

@@ -116,7 +116,7 @@ export const patientsApi = {
   update:         (id: string, data: any)      => api.patch(`/patients/${id}`, data),
   clinicalSummary:(id: string)                 => api.get(`/patients/${id}/clinical-summary`),
   activatePortal: (id: string, email: string)  => api.post(`/patients/${id}/activate-portal`, { email }),
-  search:         (q: string)                  => api.get('/patients', { params: { q, limit: 8 } }),
+  search:         (params: any)                => api.get('/patients', { params }),
 };
 
 export const appointmentsApi = {

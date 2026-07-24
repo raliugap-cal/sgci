@@ -155,7 +155,7 @@ function InstrumentoForm({ expedienteId, onDone }: { expedienteId: string; onDon
   const preguntas: any[] = instrumento?.preguntas ?? [];
 
   const applyMutation = useMutation({
-    mutationFn: () => addictionsApi.applyInstrument({ expedienteAdiccionId: expedienteId, instrumentoId, respuestas }),
+    mutationFn: () => addictionsApi.applyInstrument(expedienteId, { instrumentoId, respuestas }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['adicciones-dashboard'] }); onDone(); },
   });
 
@@ -243,7 +243,7 @@ export default function AdiccionesPage() {
   // Nueva sesión
   const sesionForm = useForm();
   const sesionMutation = useMutation({
-    mutationFn: (d: any) => addictionsApi.createSession({ ...d, expedienteAdiccionId: selectedExp?.id }),
+    mutationFn: (d: any) => addictionsApi.createSession(selectedExp?.id ?? '', { ...d }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['adicciones-dashboard'] }); sesionForm.reset(); },
   });
 

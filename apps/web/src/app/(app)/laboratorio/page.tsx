@@ -147,7 +147,7 @@ export default function LaboratorioPage() {
   });
 
   const collectMutation = useMutation({
-    mutationFn: (id: string) => labApi.collectSample(id),
+    mutationFn: (id: string) => labApi.collectSample(id, {}),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['lab-ordenes'] }); setSelectedOrden(null); },
   });
 

@@ -164,6 +164,10 @@ export const billingApi = {
 };
 
 export const addictionsApi = {
+  getDashboard:     (id: string)         => api.get(`/addictions/expedientes/${id}/dashboard`),
+  getSesiones:      (id: string)         => api.get(`/addictions/expedientes/${id}/sesiones`),
+  getPti:           (id: string)         => api.get(`/addictions/expedientes/${id}/pti`),
+  getDiario:        (id: string)         => api.get(`/addictions/expedientes/${id}/diario`),
   createExpediente: (data: any)          => api.post('/addictions/expedientes', data),
   getExpediente:    (id: string)         => api.get(`/addictions/expedientes/${id}`),
   listExpedientes:  (params?: any)       => api.get('/addictions/expedientes', { params }),

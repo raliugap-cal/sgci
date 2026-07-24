@@ -11,6 +11,7 @@ import { Controller, Post, Body, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { EncryptionService } from '../common/services/encryption.service';
 import { PrismaModule } from '../database/prisma.module';
 import { IsEmail, IsString, MinLength } from 'class-validator';
 import { randomBytes } from 'crypto';

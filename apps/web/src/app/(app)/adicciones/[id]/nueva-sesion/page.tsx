@@ -18,7 +18,7 @@ export default function NuevaSesionPage() {
   const huboConsumo = watch('huboConsumo');
 
   const mutation = useMutation({
-    mutationFn: (d: any) => addictionsApi.createSesion({ ...d, expedienteAdiccionId: id }),
+    mutationFn: (d: any) => addictionsApi.createSesion(id as string, { ...d }),
     onSuccess: () => router.push(`/adicciones/${id}?tab=sesiones`),
   });
 

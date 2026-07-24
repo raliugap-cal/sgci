@@ -5,22 +5,24 @@ import { useAuthStore } from '@/lib/auth-store';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    // Zustand persist necesita un ciclo completo para hidratar desde localStorage
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated()) {
+    console.log('[AppLayout] accessToken:', !!accessToken, 'user:', !!user);
+    if (!accessToken || !user) {
+      console.log('[AppLayout] No auth — redirecting to login');
       router.replace('/login');
     }
-  }, [hydrated]);
+  }, [hydrated, accessToken, user]);
 
-  if (!hydrated) {
+  if (!hydrated || !accessToken || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -29,10 +31,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated()) {
-    return null;
   }
 
   return <>{children}</>;

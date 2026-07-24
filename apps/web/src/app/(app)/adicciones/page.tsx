@@ -233,9 +233,9 @@ export default function AdiccionesPage() {
   // Cargar expediente al seleccionar paciente
   const loadExpedienteMutation = useMutation({
     mutationFn: async (paciente: any) => {
-      // En producción: GET /addictions/expedientes?pacienteId=X
-      // Por ahora usamos un placeholder
-      return { id: `exp-${paciente.id}`, paciente, estadoTratamiento: 'EN_TRATAMIENTO' };
+      const { data } = await addictionsApi.listExpedientes({ pacienteId: paciente.id });
+      if (data?.data?.[0]) return data.data[0];
+      throw new Error('Este paciente no tiene expediente de adicciones');
     },
     onSuccess: (data) => setSelectedExp(data),
   });

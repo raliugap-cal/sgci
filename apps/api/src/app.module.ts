@@ -18,6 +18,8 @@ import { FilesModule } from './files/files.module';
 import { TelemedicineModule } from './telemedicine/telemedicine.module';
 import { SyncModule } from './sync/sync.module';
 import { HealthModule } from './health/health.module';
+import { StaffModule } from './staff/staff.module';
+import { SedesModule } from './sedes/sedes.module';
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { HealthModule } from './health/health.module';
     // ─── Soporte ──────────────────────────────────────────
     ReportsModule,
     AdminModule,
+    StaffModule,
+    SedesModule,
     HealthModule,
   ],
 })

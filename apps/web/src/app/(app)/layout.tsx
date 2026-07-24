@@ -1,9 +1,4 @@
 'use client';
-// ═══════════════════════════════════════════════════════════
-// (app) LAYOUT — Guard de autenticación
-// Redirige a /login si no hay sesión activa
-// Aplica a todas las rutas dentro del grupo (app)
-// ═══════════════════════════════════════════════════════════
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
@@ -14,11 +9,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace('/login');
-    } else {
-      setChecked(true);
-    }
+    // Esperar un tick para que Zustand hidrate desde localStorage
+    const timer = setTimeout(() => {
+      if (!isAuthenticated()) {
+        router.replace('/login');
+      } else {
+        setChecked(true);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!checked) {

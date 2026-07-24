@@ -113,6 +113,7 @@ export default function PatientDetailPage() {
                 className="flex items-center gap-1.5 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-50">
                 <FileText size={13} /> Consulta
               </Link>
+              {!p.portalActivado && (
                 <button
                   onClick={async () => {
                     const email = prompt('Email del paciente para acceso al portal:');

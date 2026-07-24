@@ -9,9 +9,9 @@ import Link from 'next/link';
 import { format, differenceInYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  User, Calendar, Pill, FlaskConical, Receipt,
+  Shield, User, Calendar, Pill, FlaskConical, Receipt,
   Heart, AlertTriangle, Phone, Mail, ArrowLeft,
-  FileText, Shield, Plus, ExternalLink, CheckCircle,
+  FileText, Plus, ExternalLink, CheckCircle,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { patientsApi, appointmentsApi, billingApi } from '@/lib/api';
@@ -113,6 +113,21 @@ export default function PatientDetailPage() {
                 className="flex items-center gap-1.5 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-50">
                 <FileText size={13} /> Consulta
               </Link>
+                <button
+                  onClick={async () => {
+                    const email = prompt('Email del paciente para acceso al portal:');
+                    try {
+                      await patientsApi.activatePortal(p.id, email);
+                      alert('✅ Portal activado. Se enviará contraseña temporal a ' + email);
+                      window.location.reload();
+                    } catch (e: any) {
+                      alert('Error: ' + (e?.response?.data?.message ?? e.message));
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-green-300 text-green-700 rounded-lg text-sm hover:bg-green-50">
+                  <Shield size={13} /> Activar Portal
+                </button>
+              )}
             </div>
           </div>
         </div>

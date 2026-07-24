@@ -21,7 +21,7 @@ import { EncryptionService } from '../common/services/encryption.service';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '8h' },
+        signOptions: { expiresIn: '8h', issuer: 'sgci', audience: 'sgci-staff' },
       }),
     }),
   ],

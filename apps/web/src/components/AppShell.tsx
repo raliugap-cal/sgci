@@ -9,6 +9,7 @@ import {
   Calendar, Users, FileText, FlaskConical, Pill, Receipt,
   BarChart2, Settings, LogOut, ChevronDown, Bell, Search,
   Heart, ClipboardList, Menu, X, Shield, Stethoscope,
+  UserCog, Package, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { authApi } from '@/lib/api';
@@ -24,6 +25,9 @@ const NAV_ITEMS = [
   { href: '/recetas',      icon: Pill,           label: 'Recetas',     roles: ['MEDICO','PSICOLOGO','SUPERADMIN'] },
   { href: '/facturacion',  icon: Receipt,        label: 'Facturación', roles: ['CAJA','ADMIN_SEDE','SUPERADMIN'] },
   { href: '/reportes',     icon: ClipboardList,  label: 'Reportes',    roles: ['ADMIN_SEDE','SUPERADMIN'] },
+  { href: '/personal',     icon: UserCog,        label: 'Personal',    roles: ['ADMIN_SEDE','SUPERADMIN'] },
+  { href: '/almacen',      icon: Package,        label: 'Almacén',     roles: ['ENFERMERIA','ADMIN_SEDE','SUPERADMIN'] },
+  { href: '/admin/sedes', icon: Building2,      label: 'Sedes',       roles: ['SUPERADMIN'] },
   { href: '/admin',        icon: Settings,       label: 'Admin',       roles: ['ADMIN_SEDE','SUPERADMIN'] },
 ];
 

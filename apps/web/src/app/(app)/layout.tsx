@@ -6,21 +6,21 @@ import { useAuthStore } from '@/lib/auth-store';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const [checked, setChecked] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    // Esperar un tick para que Zustand hidrate desde localStorage
-    const timer = setTimeout(() => {
-      if (!isAuthenticated()) {
-        router.replace('/login');
-      } else {
-        setChecked(true);
-      }
-    }, 50);
-    return () => clearTimeout(timer);
+    // Zustand persist necesita un ciclo completo para hidratar desde localStorage
+    setHydrated(true);
   }, []);
 
-  if (!checked) {
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!isAuthenticated()) {
+      router.replace('/login');
+    }
+  }, [hydrated]);
+
+  if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -29,6 +29,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  if (!isAuthenticated()) {
+    return null;
   }
 
   return <>{children}</>;
